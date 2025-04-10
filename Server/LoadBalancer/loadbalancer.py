@@ -4,6 +4,10 @@ import itertools
 import hashlib
 import random
 import time
+import os
+import json
+
+VALID_API_KEY = '0586c419972ff7e63d40d6e0c87bb494fcd04dcbd770089724339fed98f81a5c'
 
 app = Flask(__name__)
 
@@ -44,9 +48,10 @@ def is_server_healthy(server):
             return False
     except:
         server_states[server]['consecutive_failures'] += 1
-        if server_states[server]['consecutive_failures'] > 3:
-            server_states[server]['healthy'] = False
-        return False
+        if server_states[server]['consecutive_failures'] > 0:
+            backoff_time = min(30, 2 ** server_states[server]['consecutive_failures'])
+            if time.time() - server_states[server]['last_check'] < backoff_time:
+                return False  # Skip this server during its backoff period
 
 def get_server_load(server):
     """Get current load of a server"""
@@ -69,14 +74,48 @@ def choose_server_round_robin():
     return None
 
 def choose_server_hash(request_data):
-    """Source IP hashing-based server selection"""
-    # Create a composite key from multiple request parameters
-    key = str(request_data.get('task_type', '')) + \
-          str(request_data.get('num1', '')) + \
-          str(request_data.get('num2', '')) + \
-          str(request_data.get('text', ''))
+    task_type = str(request_data.get('task_type', ''))
     
-    # Try servers in hash-determined order
+    if task_type.startswith('db_'):
+        # For database tasks, hash based on the operation type and query parameters
+        if 'query' in request_data:
+            query_str = json.dumps(request_data['query'], sort_keys=True)
+            key = f"{task_type}:{query_str}"
+        elif 'user_data' in request_data:
+            # For user creation, hash on username to route similar usernames to same server
+            username = request_data.get('user_data', {}).get('username', '')
+            key = f"{task_type}:user:{username}"
+        elif 'pipeline' in request_data:
+            # For aggregation, hash on the aggregation pipeline
+            pipeline_str = json.dumps(request_data['pipeline'], sort_keys=True)
+            key = f"{task_type}:{pipeline_str}"
+        else:
+            key = task_type
+    else:
+        # For computation tasks, hash based on operation type and input parameters
+        if task_type in ['addition', 'multiplication']:
+            nums = sorted([
+                request_data.get('num1', 0),
+                request_data.get('num2', 0)
+            ])
+            key = f"{task_type}:{nums[0]}:{nums[1]}"
+        elif task_type == 'factorial':
+            # Factorial operations are computationally intensive, so hash on the number
+            key = f"{task_type}:{request_data.get('num', 0)}"
+        elif task_type == 'sort_large_list':
+            # For sorting, hash on the length of the list
+            list_len = len(request_data.get('numbers', []))
+            key = f"{task_type}:len:{list_len}"
+        elif 'text' in request_data:
+            # For string operations, hash on first few chars of text
+            text = request_data.get('text', '')[:10]  # First 10 chars
+            key = f"{task_type}:{text}"
+        else:
+            
+            key = task_type
+    time_bucket = int(time.time()) // 30
+    key = f"{key}:{time_bucket}"
+    
     hash_val = int(hashlib.md5(key.encode()).hexdigest(), 16)
     start_idx = hash_val % len(servers)
     
@@ -88,24 +127,48 @@ def choose_server_hash(request_data):
     return None
 
 def choose_server_least_loaded():
-    """Least-loaded server selection"""
-    # Update load information for all servers
+    """Least-loaded server selection with improvements"""
+    # Update load information for all servers first
+    healthy_servers = []
+    
     for server in servers:
         if is_server_healthy(server):
-            get_server_load(server)
+            try:
+                response = requests.get(f"{server}/load", timeout=1)
+                if response.status_code == 200:
+                    load = response.json().get('load', 0)
+                    server_states[server]['current_load'] = load
+                    healthy_servers.append((server, load))
+                else:
+                    server_states[server]['current_load'] += 1
+                    healthy_servers.append((server, server_states[server]['current_load']))
+            except:
+                server_states[server]['current_load'] += 2
+                healthy_servers.append((server, server_states[server]['current_load']))
+    if not healthy_servers:
+        return None
     
-    # Choose the healthy server with minimum load
-    min_load = float('inf')
-    chosen_server = None
-    
-    for server in servers:
-        if server_states[server]['healthy']:
-            load = server_states[server]['current_load']
-            if load < min_load:
-                min_load = load
-                chosen_server = server
+    healthy_servers.sort(key=lambda x: x[1] + random.uniform(0, 0.5))
+    chosen_server = healthy_servers[0][0]
+    server_states[chosen_server]['current_load'] += 1
     
     return chosen_server
+
+def forward_request(server_url, data):
+    try:
+        # Get API key from environment (same key as other components)
+        api_key = os.environ.get('API_KEY', 'default-key-replace-in-production')
+        headers = {'X-API-Key': api_key}
+        
+        response = requests.post(
+            f"{server_url}/process", 
+            json=data,
+            headers=headers,
+            timeout=REQUEST_TIMEOUT
+        )
+        return response.json(), response.status_code
+    except requests.RequestException as e:
+        return {"error": str(e)}, 500
 
 @app.route('/set_algorithm', methods=['POST'])
 def set_algorithm():
@@ -121,12 +184,21 @@ def set_algorithm():
 
 @app.route('/request', methods=['POST'])
 def route_request():
+    
+     # Validate API key
+    api_key = request.headers.get('X-API-Key')
+    if api_key != VALID_API_KEY:
+        return jsonify({"error": "Unauthorized"}), 401
+        
     if current_algorithm == "round_robin":
         server = choose_server_round_robin()
     elif current_algorithm == "source_hashing":
         server = choose_server_hash(request.json)
     elif current_algorithm == "least_loaded":
         server = choose_server_least_loaded()
+        app.logger.info(f"Selected server {server} using least_loaded algorithm")
+        loads = {s: server_states[s]['current_load'] for s in servers}
+        app.logger.info(f"Current server loads: {loads}")
     else:
         server = choose_server_round_robin()
     
@@ -134,16 +206,23 @@ def route_request():
         return jsonify({"error": "No healthy servers available"}), 503
     
     try:
+        # Forward the headers from the original request
+        headers = {
+            'X-API-Key': api_key,
+            'Content-Type': 'application/json'
+        }
+        
         response = requests.post(
             f"{server}/request",
             json=request.json,
+            headers=headers,
             timeout=10
         )
         return response.json(), response.status_code
     except Exception as e:
         server_states[server]['consecutive_failures'] += 1
         return jsonify({"error": str(e)}), 500
-
+    
 @app.route('/health', methods=['GET'])
 def health_check():
     healthy_servers = sum(1 for server in servers if is_server_healthy(server))

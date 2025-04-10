@@ -1,10 +1,14 @@
-import requests
-import time
-import threading
-import random
-import statistics
-from datetime import datetime
-from collections import defaultdict
+import requests #used to send HTTP requests 
+import time #for time.time() time.sleep()
+import threading #for concurrent execution of requests 
+import random #generates random values
+import statistics #for mean, median, mode, standard deviation
+from datetime import datetime #to track timestamps 
+from collections import defaultdict #initializes missing keys with default value
+import string #for generating random user names
+import json #encoding and decoding json data 
+import os
+
 
 # Configuration
 SINGLE_SERVER_URL = "http://server1:5000/request"
@@ -14,8 +18,8 @@ SET_ALGO_URL = "http://loadbalancer:5000/set_algorithm"
 class PerformanceMetrics:
     """Track and analyze request performance metrics"""
     def __init__(self):
-        self.response_times = []
-        self.failed_requests = []  # Store failed request details
+        self.response_times = [] #dictionary(stores key value pairs)
+        self.failed_requests = []  
         self.total_requests = 0
         self.server_distribution = defaultdict(list)  # Store response times per server
         self.task_distribution = defaultdict(list)    # Store response times per task type
@@ -106,8 +110,8 @@ class PerformanceMetrics:
 
         print("=" * 60)
 
-def generate_task():
-    """Generate a random task with controlled distribution"""
+def generate_basic_task():
+    """Generate a random basic computation task"""
     tasks = [
         # Light tasks (30% probability)
         *([{
@@ -143,16 +147,74 @@ def generate_task():
     ]
     return random.choice(tasks)
 
-def send_request(url, metrics, task_id, batch_start_time=None):
+def generate_db_task():
+    """Generate a random database task"""
+    
+    # Generate a random user for create operations
+    def generate_user():
+        return {
+            "username": ''.join(random.choices(string.ascii_lowercase, k=8)),
+            "email": f"user_{random.randint(1000, 9999)}@example.com",
+            "age": random.randint(18, 80),
+            "active": random.choice([True, False])
+        }
+    
+    tasks = [
+        # Data generation (seeding the database)
+        *([{
+            "task_type": "db_generate_data",
+            "count": random.randint(5, 20)
+        }] * 10),
+        
+        # Create operations
+        *([{
+            "task_type": "db_create_user",
+            "user_data": generate_user()
+        }] * 20),
+        
+        # Query operations
+        *([{
+            "task_type": "db_find_users",
+            "query": {"active": True},
+            "limit": random.randint(5, 20)
+        }] * 25),
+        *([{
+            "task_type": "db_find_users",
+            "query": {"age": {"$gt": 30}},
+            "limit": random.randint(5, 20)
+        }] * 25),
+        
+        # Aggregation operations (heavier)
+        *([{
+            "task_type": "db_aggregate",
+            "pipeline": [
+                {"$group": {"_id": "$active", "count": {"$sum": 1}, "avg_age": {"$avg": "$age"}}}
+            ]
+        }] * 20)
+    ]
+    return random.choice(tasks)
+
+def send_request(url, metrics, task_id, task_type="basic", batch_start_time=None):
     """Send a single request and record metrics"""
-    task = generate_task()
+    if task_type == "basic":
+        task = generate_basic_task()
+    elif task_type == "database":
+        task = generate_db_task()
+    else:
+        # Mix of both types
+        task = generate_db_task() if random.random() < 0.4 else generate_basic_task()
+    
     start_time = time.time()
     
     try:
-        response = requests.post(url, json=task, timeout=30)
+       
+    # Get API key from environment or use secure default
+        api_key = '0586c419972ff7e63d40d6e0c87bb494fcd04dcbd770089724339fed98f81a5c'
+        headers = {'X-API-Key': api_key}
+        
+        response = requests.post(url, json=task, headers=headers, timeout=30)
         end_time = time.time()
         response_time = end_time - start_time
-        
         if response.status_code == 200:
             server = response.json().get('server', 'unknown')
             load = response.json().get('load', 'N/A')
@@ -177,12 +239,12 @@ def send_request(url, metrics, task_id, batch_start_time=None):
         print(f"Request {task_id:3d} | {task['task_type']:15s} | Error: {str(e)}")
         metrics.record_request(None, task['task_type'], None, str(e))
 
-def run_test_phase(url, num_requests, phase_name, delay_between_requests=0.1):
+def run_test_phase(url, num_requests, phase_name, task_type="basic", delay_between_requests=0.1):
     """Run a test phase with the specified number of requests"""
     metrics = PerformanceMetrics()
     
     print(f"\n{'='*20} {phase_name} {'='*20}")
-    print(f"Starting {num_requests} requests...")
+    print(f"Starting {num_requests} requests ({task_type} tasks)...")
     print("\nRequest ID | Task Type       | Server          | Load | Time (Queue)")
     print("-" * 75)
     
@@ -193,7 +255,7 @@ def run_test_phase(url, num_requests, phase_name, delay_between_requests=0.1):
     for i in range(num_requests):
         thread = threading.Thread(
             target=send_request,
-            args=(url, metrics, i+1, batch_start_time)
+            args=(url, metrics, i+1, task_type, batch_start_time)
         )
         threads.append(thread)
         thread.start()
@@ -205,31 +267,95 @@ def run_test_phase(url, num_requests, phase_name, delay_between_requests=0.1):
         
     metrics.print_summary(phase_name)
     return metrics
+def test_authentication():
+    """Test API key authentication"""
+    print("\n=== Testing API Authentication ===")
+    
+    # Test with correct API key
+    task = {"task_type": "addition", "num1": 5, "num2": 10}
+    correct_api_key = '0586c419972ff7e63d40d6e0c87bb494fcd04dcbd770089724339fed98f81a5c'
+    correct_headers = {'X-API-Key': correct_api_key}
+    
+    try:
+        print("Testing with correct API key...")
+        response = requests.post(LOAD_BALANCER_URL, json=task, headers=correct_headers, timeout=5)
+        print(f"Status: {response.status_code}")
+        if response.status_code == 200:
+            print("✅ Authentication successful!")
+        else:
+            print(f"❌ Unexpected response: {response.text}")
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+    
+    
+    # Test with incorrect API key
+    incorrect_headers = {'X-API-Key': 'wrong-key'}
+    
+    try:
+        print("\nTesting with incorrect API key...")
+        response = requests.post(LOAD_BALANCER_URL, json=task, headers=incorrect_headers, timeout=5)
+        print(f"Status: {response.status_code}")
+        if response.status_code == 401:
+            print("✅ Authentication correctly rejected invalid key!")
+        else:
+            print(f"❌ Unexpected response: {response.text}")
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+    
+    # Test with no API key
+    try:
+        print("\nTesting with no API key...")
+        response = requests.post(LOAD_BALANCER_URL, json=task, timeout=5)
+        print(f"Status: {response.status_code}")
+        if response.status_code == 401:
+            print("✅ Authentication correctly rejected missing key!")
+        else:
+            print(f"❌ Unexpected response: {response.text}")
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+
 
 def main():
     """Main test execution function"""
+    test_authentication()
     # Test configuration
-    NUM_REQUESTS = 100  # Increased number of requests to better show load effects
-    DELAY_BETWEEN = 0.05  # Smaller delay to increase server stress
+    NUM_REQUESTS_BASIC = 100  # Regular computation tasks
+    NUM_REQUESTS_DB = 50      # Database tasks (more complex)
+    DELAY_BETWEEN = 0.05     # Small delay to increase server stress
     
-    print("\n=== Load Balancing Demonstration ===")
+    print("\n=== Enhanced Load Balancing Demonstration with Database ===")
     print("This test will demonstrate the effectiveness of different load balancing strategies")
+    print("with both basic computation tasks and database operations.")
     
     # Phase 1: Single Server (to demonstrate overload)
-    print("\nPhase 1: No Load Balancing (Single Server)")
+    print("\nPhase 1: No Load Balancing (Single Server) - Basic Tasks")
     print("Sending all requests to a single server to demonstrate overload")
-    single_metrics = run_test_phase(
+    single_basic_metrics = run_test_phase(
         SINGLE_SERVER_URL, 
-        NUM_REQUESTS, 
-        "Single Server",
+        NUM_REQUESTS_BASIC, 
+        "Single Server - Basic Tasks",
+        "basic",
         DELAY_BETWEEN
     )
     
     time.sleep(5)  # Cool down period
     
-    # Phase 2: Load Balanced Testing
-    print("\nPhase 2: Load Balancing")
-    print("Testing different load balancing algorithms")
+    # Phase 2: Single Server with Database Tasks
+    print("\nPhase 2: No Load Balancing (Single Server) - Database Tasks")
+    print("Testing database operations on a single server")
+    single_db_metrics = run_test_phase(
+        SINGLE_SERVER_URL, 
+        NUM_REQUESTS_DB, 
+        "Single Server - Database Tasks",
+        "database",
+        DELAY_BETWEEN * 2  # Slightly longer delay for DB tasks
+    )
+    
+    time.sleep(5)  # Cool down period
+    
+    # Phase 3: Load Balanced Testing with different algorithms
+    print("\nPhase 3: Load Balancing - Both Task Types")
+    print("Testing different load balancing algorithms with mixed workloads")
     
     algorithms = ["round_robin", "source_hashing", "least_loaded"]
     algorithm_metrics = {}
@@ -249,18 +375,20 @@ def main():
             
         time.sleep(3)  # Wait for algorithm change to take effect
         
+        # Mixed workload testing
         algorithm_metrics[algorithm] = run_test_phase(
             LOAD_BALANCER_URL, 
-            NUM_REQUESTS, 
-            f"Load Balanced ({algorithm})",
+            NUM_REQUESTS_BASIC + NUM_REQUESTS_DB, 
+            f"Load Balanced ({algorithm}) - Mixed Tasks",
+            "mixed",
             DELAY_BETWEEN
         )
-        time.sleep(3)  # Cool down between algorithms
+        time.sleep(5)  # Cool down between algorithms
     
     # Final comparison
     print("\n=== Final Comparison ===")
-    print("\nMetric          | Single Server | Round Robin  | Source Hash  | Least Loaded")
-    print("-" * 75)
+    print("\nMetric          | Single (Basic) | Single (DB)  | Round Robin  | Source Hash  | Least Loaded")
+    print("-" * 90)
     
     def get_stats(metrics):
         if not metrics or not metrics.response_times:
@@ -273,16 +401,55 @@ def main():
             f"{len(metrics.failed_requests)}"
         )
     
-    single_stats = get_stats(single_metrics)
+    single_basic_stats = get_stats(single_basic_metrics)
+    single_db_stats = get_stats(single_db_metrics)
     rr_stats = get_stats(algorithm_metrics.get('round_robin'))
     sh_stats = get_stats(algorithm_metrics.get('source_hashing'))
     ll_stats = get_stats(algorithm_metrics.get('least_loaded'))
     
-    print(f"Success Rate    | {single_stats[0]:12s} | {rr_stats[0]:11s} | {sh_stats[0]:11s} | {ll_stats[0]:11s}")
-    print(f"Avg Response    | {single_stats[1]:12s} | {rr_stats[1]:11s} | {sh_stats[1]:11s} | {ll_stats[1]:11s}")
-    print(f"Min Response    | {single_stats[2]:12s} | {rr_stats[2]:11s} | {sh_stats[2]:11s} | {ll_stats[2]:11s}")
-    print(f"Max Response    | {single_stats[3]:12s} | {rr_stats[3]:11s} | {sh_stats[3]:11s} | {ll_stats[3]:11s}")
-    print(f"Failed Requests | {single_stats[4]:12s} | {rr_stats[4]:11s} | {sh_stats[4]:11s} | {ll_stats[4]:11s}")
+    print(f"Success Rate    | {single_basic_stats[0]:13s} | {single_db_stats[0]:11s} | {rr_stats[0]:11s} | {sh_stats[0]:11s} | {ll_stats[0]:11s}")
+    print(f"Avg Response    | {single_basic_stats[1]:13s} | {single_db_stats[1]:11s} | {rr_stats[1]:11s} | {sh_stats[1]:11s} | {ll_stats[1]:11s}")
+    print(f"Min Response    | {single_basic_stats[2]:13s} | {single_db_stats[2]:11s} | {rr_stats[2]:11s} | {sh_stats[2]:11s} | {ll_stats[2]:11s}")
+    print(f"Max Response    | {single_basic_stats[3]:13s} | {single_db_stats[3]:11s} | {rr_stats[3]:11s} | {sh_stats[3]:11s} | {ll_stats[3]:11s}")
+    print(f"Failed Requests | {single_basic_stats[4]:13s} | {single_db_stats[4]:11s} | {rr_stats[4]:11s} | {sh_stats[4]:11s} | {ll_stats[4]:11s}")
+    
+    print("\n=== Database Task Performance Comparison ===")
+    print("This shows how different load balancing algorithms handle database tasks")
+    
+    # Extract database task performance from metrics
+    def get_db_task_stats(metrics):
+        db_tasks = []
+        for task, times in metrics.task_distribution.items():
+            if task.startswith('db_'):
+                db_tasks.extend(times)
+        
+        if not db_tasks:
+            return "N/A", "N/A", "N/A"
+        
+        return (
+            f"{len(db_tasks)}",
+            f"{statistics.mean(db_tasks):.2f}s" if db_tasks else "N/A",
+            f"{min(db_tasks):.2f}s" if db_tasks else "N/A",
+            f"{max(db_tasks):.2f}s" if db_tasks else "N/A"
+        )
+    
+    # Only analyze db tasks if they exist in the metrics
+    print("\nMetric         | Single Server | Round Robin  | Source Hash  | Least Loaded")
+    print("-" * 75)
+    
+    single_db_task_stats = get_db_task_stats(single_db_metrics)
+    rr_db_task_stats = get_db_task_stats(algorithm_metrics.get('round_robin', PerformanceMetrics()))
+    sh_db_task_stats = get_db_task_stats(algorithm_metrics.get('source_hashing', PerformanceMetrics()))
+    ll_db_task_stats = get_db_task_stats(algorithm_metrics.get('least_loaded', PerformanceMetrics()))
+    
+    if len(single_db_task_stats) >= 4:  # Ensure we have the stats
+        print(f"DB Task Count  | {single_db_task_stats[0]:13s} | {rr_db_task_stats[0]:11s} | {sh_db_task_stats[0]:11s} | {ll_db_task_stats[0]:11s}")
+        print(f"Avg Response   | {single_db_task_stats[1]:13s} | {rr_db_task_stats[1]:11s} | {sh_db_task_stats[1]:11s} | {ll_db_task_stats[1]:11s}")
+        print(f"Min Response   | {single_db_task_stats[2]:13s} | {rr_db_task_stats[2]:11s} | {sh_db_task_stats[2]:11s} | {ll_db_task_stats[2]:11s}")
+        print(f"Max Response   | {single_db_task_stats[3]:13s} | {rr_db_task_stats[3]:11s} | {sh_db_task_stats[3]:11s} | {ll_db_task_stats[3]:11s}")
+
+    print("\n=== Test Complete ===")
+    print("Use MongoDB Compass to analyze request distribution and performance data stored in the database")
 
 if __name__ == "__main__":
     main()

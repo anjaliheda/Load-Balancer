@@ -4,8 +4,22 @@ import math
 import time
 import threading
 import os
+import secrets
+from pymongo import MongoClient
+import random
+import string
 
 app = Flask(__name__)
+
+# Define API key (using environment variable or generate a default)
+API_KEY = os.environ.get('API_KEY')
+if not API_KEY:
+    # Generate a secure key if not provided
+    API_KEY = secrets.token_hex(32)
+    print(f"WARNING: No API_KEY provided. Generated temporary key: {API_KEY}")
+else:
+    print("API authentication enabled with provided key")
+
 
 # Get container hostname and map it to a simple name
 hostname = socket.gethostname()
@@ -17,10 +31,17 @@ server_mapping = {
 }
 server_name = server_mapping.get(os.environ.get('HOSTNAME', hostname), hostname)
 
+# Database connection
+DATABASE_URL = os.environ.get('DATABASE_URL', 'mongodb://database:27017/loadbalancer')
+mongo_client = MongoClient(DATABASE_URL)
+db = mongo_client.get_database()
+requests_collection = db.requests
+data_collection = db.user_data
+
 # Server configuration
 MAX_CONCURRENT = 5          # Maximum concurrent requests before overload
 OVERLOAD_THRESHOLD = 8      # Threshold for server to start rejecting requests
-RECOVERY_TIME = 0.5        # Time in seconds to recover one unit of load
+RECOVERY_TIME = 0.5         # Time in seconds to recover one unit of load
 
 # Server state
 class ServerState:
@@ -45,6 +66,20 @@ def update_load(delta):
             server_state.total_requests += 1
         return server_state.request_count
 
+def log_request_to_db(task_type, processing_time, result, status="success"):
+    """Log request information to database"""
+    try:
+        requests_collection.insert_one({
+            'server': server_name,
+            'task_type': task_type,
+            'processing_time': processing_time,
+            'timestamp': time.time(),
+            'status': status,
+            'result': str(result)[:100]  # Truncate result if too long
+        })
+    except Exception as e:
+        print(f"Error logging to database: {str(e)}")
+
 @app.route('/health', methods=['GET'])
 def health_check():
     """Health check endpoint that reports server status"""
@@ -65,6 +100,22 @@ def health_check():
         "total_requests": server_state.total_requests
     }), code
 
+@app.before_request
+def check_auth():
+    # Skip authentication for health check endpoint
+    if request.path == '/health':
+        return None
+        
+    # Get API key from header
+    api_key = request.headers.get('X-API-Key')
+    
+    # If no key or incorrect key, return 401 Unauthorized
+    if not api_key or api_key != API_KEY:
+        return jsonify({
+            "error": "Unauthorized", 
+            "message": "Valid API key required"
+        }), 401
+    
 @app.route('/load', methods=['GET'])
 def get_load():
     """Return current server load metrics"""
@@ -80,6 +131,8 @@ def handle_request():
     """Handle incoming task requests with load-based processing"""
     current_load = update_load(1)  # Increment load counter
     start_time = time.time()
+    result = None
+    task_type = "unknown"
 
     try:
         # Reject if server is severely overloaded
@@ -129,8 +182,66 @@ def handle_request():
             time.sleep(base_delay * 3)  # Heavier task
             result = sorted(lst)
 
+        # Database operations (new complex tasks)
+        elif task_type == 'db_create_user':
+            user_data = data.get('user_data', {})
+            user_data['created_at'] = time.time()
+            time.sleep(base_delay * 2)  # Database write operation
+            result = data_collection.insert_one(user_data)
+            result = str(result.inserted_id)
+
+        elif task_type == 'db_find_users':
+            query = data.get('query', {})
+            limit = min(data.get('limit', 10), 100)  # Limit response size
+            time.sleep(base_delay * 2.5)  # Database query operation
+            result = list(data_collection.find(query, limit=limit))
+            # Convert ObjectId to string for JSON serialization
+            for doc in result:
+                doc['_id'] = str(doc['_id'])
+
+        elif task_type == 'db_update_user':
+            user_id = data.get('user_id', '')
+            update_data = data.get('update_data', {})
+            update_data['updated_at'] = time.time()
+            time.sleep(base_delay * 2.2)  # Database update operation
+            result = data_collection.update_one(
+                {'_id': user_id}, 
+                {'$set': update_data}
+            )
+            result = result.modified_count
+
+        elif task_type == 'db_aggregate':
+            pipeline = data.get('pipeline', [])
+            time.sleep(base_delay * 3)  # Complex database operation
+            result = list(data_collection.aggregate(pipeline))
+            # Convert ObjectId to string for JSON serialization
+            for doc in result:
+                if '_id' in doc:
+                    doc['_id'] = str(doc['_id'])
+
+        elif task_type == 'db_generate_data':
+            # Generate random data for testing
+            count = min(data.get('count', 10), 100)  # Limit for safety
+            time.sleep(base_delay * 3.5)  # Heavy operation
+            
+            # Generate random user records
+            records = []
+            for _ in range(count):
+                user = {
+                    'username': ''.join(random.choices(string.ascii_lowercase, k=8)),
+                    'email': f"user_{random.randint(1000, 9999)}@example.com",
+                    'age': random.randint(18, 80),
+                    'active': random.choice([True, False]),
+                    'created_at': time.time() - random.randint(0, 86400 * 30)  # Up to 30 days ago
+                }
+                records.append(user)
+            
+            result = data_collection.insert_many(records)
+            result = len(result.inserted_ids)
+
         else:
             update_load(-1)  # Decrement load counter
+            log_request_to_db(task_type, 0, None, "invalid_task")
             return jsonify({"error": "Invalid task type"}), 400
 
         # Add additional delay if server is under heavy load
@@ -146,10 +257,15 @@ def handle_request():
             "processing_time": processing_time
         }
 
+        # Log successful request to database
+        log_request_to_db(task_type, processing_time, result)
+
         update_load(-1)  # Decrement load counter
         return jsonify(response)
 
     except Exception as e:
+        processing_time = time.time() - start_time
+        log_request_to_db(task_type, processing_time, str(e), "error")
         update_load(-1)  # Decrement load counter
         return jsonify({"error": str(e)}), 500
 
