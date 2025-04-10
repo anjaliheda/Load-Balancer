@@ -373,7 +373,7 @@ def main():
             print(f"Error setting algorithm: {str(e)}")
             continue
             
-        time.sleep(3)  # Wait for algorithm change to take effect
+        time.sleep(3)  
         
         # Mixed workload testing
         algorithm_metrics[algorithm] = run_test_phase(
