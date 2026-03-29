@@ -1,15 +1,64 @@
+networks:
+  loadbalancer-net:
+    driver: bridge
+
+volumes:
+  idms_data:
+  honeypot_data:
+
 services:
-  client:
-    build: ./Client
-    depends_on:
-      - loadbalancer
+
+  # ── MongoDB ────────────────────────────────────────────────────────────────
+  database:
+    image: mongo:latest
+    container_name: database
+    ports:
+      - "27017:27017"
     networks:
       - loadbalancer-net
-    environment:
-      - API_KEY=0586c419972ff7e63d40d6e0c87bb494fcd04dcbd770089724339fed98f81a5c
+    restart: unless-stopped
 
+  # ── Backend servers ────────────────────────────────────────────────────────
+  server1:
+    build: ./Server/Server1
+    container_name: server1
+    depends_on:
+      - database
+    networks:
+      - loadbalancer-net
+    restart: unless-stopped
+
+  server2:
+    build: ./Server/Server2
+    container_name: server2
+    depends_on:
+      - database
+    networks:
+      - loadbalancer-net
+    restart: unless-stopped
+
+  server3:
+    build: ./Server/Server3
+    container_name: server3
+    depends_on:
+      - database
+    networks:
+      - loadbalancer-net
+    restart: unless-stopped
+
+  server4:
+    build: ./Server/Server4
+    container_name: server4
+    depends_on:
+      - database
+    networks:
+      - loadbalancer-net
+    restart: unless-stopped
+
+  # ── Load balancer ──────────────────────────────────────────────────────────
   loadbalancer:
     build: ./Server/LoadBalancer
+    container_name: loadbalancer
     ports:
       - "5000:5000"
     depends_on:
@@ -19,72 +68,60 @@ services:
       - server4
     networks:
       - loadbalancer-net
-    environment:
-      - API_KEY=0586c419972ff7e63d40d6e0c87bb494fcd04dcbd770089724339fed98f81a5c
+    restart: unless-stopped
 
-
-  server1:
-    build: ./Server/Server1
-    hostname: server1
-    environment:
-      - HOSTNAME=server1
-      - DATABASE_URL=mongodb://database:27017/loadbalancer
-      - API_KEY=0586c419972ff7e63d40d6e0c87bb494fcd04dcbd770089724339fed98f81a5c
-    depends_on:
-      - database
-    networks:
-      - loadbalancer-net
-
-  server2:
-    build: ./Server/Server2
-    hostname: server2
-    environment:
-      - HOSTNAME=server2
-      - DATABASE_URL=mongodb://database:27017/loadbalancer
-      - API_KEY=0586c419972ff7e63d40d6e0c87bb494fcd04dcbd770089724339fed98f81a5c
-    depends_on:
-      - database
-    networks:
-      - loadbalancer-net
-
-  server3:
-    build: ./Server/server3
-    hostname: server3
-    environment:
-      - HOSTNAME=server3
-      - DATABASE_URL=mongodb://database:27017/loadbalancer
-      - API_KEY=0586c419972ff7e63d40d6e0c87bb494fcd04dcbd770089724339fed98f81a5c
-    depends_on:
-      - database
-    networks:
-      - loadbalancer-net
-
-  server4:
-    build: ./Server/Server4
-    hostname: server4
-    environment:
-      - HOSTNAME=server4
-      - DATABASE_URL=mongodb://database:27017/loadbalancer
-      - API_KEY=0586c419972ff7e63d40d6e0c87bb494fcd04dcbd770089724339fed98f81a5c
-    depends_on:
-      - database
-    networks:
-      - loadbalancer-net
-
-  database:
-    image: mongo:latest
-    hostname: database
+  # ── Honeypot ───────────────────────────────────────────────────────────────
+  honeypot:
+    build: ./IDMS/honeypot
+    container_name: honeypot
     ports:
-      - "27017:27017"
+      - "5002:5002"
     volumes:
-      - mongodb_data:/data/db
+      - honeypot_data:/data
     networks:
       - loadbalancer-net
+    restart: unless-stopped
 
+  # ── IDMS proxy ─────────────────────────────────────────────────────────────
+  idms:
+    build: ./IDMS/idms
+    container_name: idms
+    ports:
+      - "5001:5001"
+    environment:
+      - LOAD_BALANCER_URL=http://loadbalancer:5000
+      - HONEYPOT_URL=http://honeypot:5002
+      - API_KEY=0586c419972ff7e63d40d6e0c87bb494fcd04dcbd770089724339fed98f81a5c
+      - SQLITE_PATH=/data/idms.db
+    volumes:
+      - idms_data:/data
+    depends_on:
+      - loadbalancer
+      - honeypot
+    networks:
+      - loadbalancer-net
+    restart: unless-stopped
 
-networks:
-  loadbalancer-net:
-    driver: bridge
+  # ── Dashboard ──────────────────────────────────────────────────────────────
+  dashboard:
+    build: ./dashboard
+    container_name: dashboard
+    ports:
+      - "8080:8080"
+    environment:
+      - IDMS_URL=http://idms:5001
+    depends_on:
+      - idms
+    networks:
+      - loadbalancer-net
+    restart: unless-stopped
 
-volumes:
-  mongodb_data:
+  # ── Client (test runner) ───────────────────────────────────────────────────
+  client:
+    build: ./Client
+    container_name: client
+    depends_on:
+      - idms
+    networks:
+      - loadbalancer-net
+    restart: "no"

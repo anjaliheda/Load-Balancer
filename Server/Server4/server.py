@@ -4,22 +4,11 @@ import math
 import time
 import threading
 import os
-import secrets
 from pymongo import MongoClient
 import random
 import string
 
 app = Flask(__name__)
-
-# Define API key (using environment variable or generate a default)
-API_KEY = os.environ.get('API_KEY')
-if not API_KEY:
-    # Generate a secure key if not provided
-    API_KEY = secrets.token_hex(32)
-    print(f"WARNING: No API_KEY provided. Generated temporary key: {API_KEY}")
-else:
-    print("API authentication enabled with provided key")
-
 
 # Get container hostname and map it to a simple name
 hostname = socket.gethostname()
@@ -100,22 +89,6 @@ def health_check():
         "total_requests": server_state.total_requests
     }), code
 
-@app.before_request
-def check_auth():
-    # Skip authentication for health check endpoint
-    if request.path == '/health':
-        return None
-        
-    # Get API key from header
-    api_key = request.headers.get('X-API-Key')
-    
-    # If no key or incorrect key, return 401 Unauthorized
-    if not api_key or api_key != API_KEY:
-        return jsonify({
-            "error": "Unauthorized", 
-            "message": "Valid API key required"
-        }), 401
-    
 @app.route('/load', methods=['GET'])
 def get_load():
     """Return current server load metrics"""

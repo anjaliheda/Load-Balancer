@@ -4,10 +4,7 @@ import itertools
 import hashlib
 import random
 import time
-import os
 import json
-
-VALID_API_KEY = '0586c419972ff7e63d40d6e0c87bb494fcd04dcbd770089724339fed98f81a5c'
 
 app = Flask(__name__)
 
@@ -48,22 +45,10 @@ def is_server_healthy(server):
             return False
     except:
         server_states[server]['consecutive_failures'] += 1
-        if server_states[server]['consecutive_failures'] > 0:
-            backoff_time = min(30, 2 ** server_states[server]['consecutive_failures'])
-            if time.time() - server_states[server]['last_check'] < backoff_time:
-                return False  # Skip this server during its backoff period
-
-def get_server_load(server):
-    """Get current load of a server"""
-    try:
-        response = requests.get(f"{server}/load", timeout=1)
-        if response.status_code == 200:
-            load = response.json().get('load', 0)
-            server_states[server]['current_load'] = load
-            return load
-    except:
-        pass
-    return server_states[server]['current_load']
+        backoff_time = min(30, 2 ** server_states[server]['consecutive_failures'])
+        if time.time() - server_states[server]['last_check'] < backoff_time:
+            return False  # Skip this server during its backoff period
+        return False
 
 def choose_server_round_robin():
     """Round-robin server selection"""
@@ -154,22 +139,6 @@ def choose_server_least_loaded():
     
     return chosen_server
 
-def forward_request(server_url, data):
-    try:
-        # Get API key from environment (same key as other components)
-        api_key = os.environ.get('API_KEY', 'default-key-replace-in-production')
-        headers = {'X-API-Key': api_key}
-        
-        response = requests.post(
-            f"{server_url}/process", 
-            json=data,
-            headers=headers,
-            timeout=REQUEST_TIMEOUT
-        )
-        return response.json(), response.status_code
-    except requests.RequestException as e:
-        return {"error": str(e)}, 500
-
 @app.route('/set_algorithm', methods=['POST'])
 def set_algorithm():
     global current_algorithm
@@ -184,12 +153,6 @@ def set_algorithm():
 
 @app.route('/request', methods=['POST'])
 def route_request():
-    
-     # Validate API key
-    api_key = request.headers.get('X-API-Key')
-    if api_key != VALID_API_KEY:
-        return jsonify({"error": "Unauthorized"}), 401
-        
     if current_algorithm == "round_robin":
         server = choose_server_round_robin()
     elif current_algorithm == "source_hashing":
@@ -206,16 +169,9 @@ def route_request():
         return jsonify({"error": "No healthy servers available"}), 503
     
     try:
-        # Forward the headers from the original request
-        headers = {
-            'X-API-Key': api_key,
-            'Content-Type': 'application/json'
-        }
-        
         response = requests.post(
             f"{server}/request",
             json=request.json,
-            headers=headers,
             timeout=10
         )
         return response.json(), response.status_code

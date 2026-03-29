@@ -1,0 +1,42 @@
+# Staged copy — content is merged into root docker-compose.yml.
+# Use this file only for isolated IDMS development/testing.
+
+
+networks:
+  loadbalancer-net:
+    external: true
+
+volumes:
+  idms_data:
+  honeypot_data:
+
+services:
+
+  honeypot:
+    build: ./honeypot
+    container_name: honeypot
+    ports:
+      - "5002:5002"
+    volumes:
+      - honeypot_data:/data
+    networks:
+      - loadbalancer-net
+    restart: unless-stopped
+
+  idms:
+    build: ./idms
+    container_name: idms
+    ports:
+      - "5001:5001"
+    environment:
+      - LOAD_BALANCER_URL=http://loadbalancer:5000
+      - HONEYPOT_URL=http://honeypot:5002
+      - API_KEY=0586c419972ff7e63d40d6e0c87bb494fcd04dcbd770089724339fed98f81a5c
+      - SQLITE_PATH=/data/idms.db
+    volumes:
+      - idms_data:/data
+    depends_on:
+      - honeypot
+    networks:
+      - loadbalancer-net
+    restart: unless-stopped

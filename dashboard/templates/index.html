@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Traffic Inspection Dashboard</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:           #0d0d1a;
+      --card:         #131325;
+      --border:       #252545;
+      --text:         #d0d0e0;
+      --muted:        #5a5a78;
+      --allow:        #4ade80;
+      --block:        #f87171;
+      --honeypot:     #fb923c;
+      --deprio:       #facc15;
+      --accent:       #60a5fa;
+      --row-hover:    #1a1a2e;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Courier New', Courier, monospace;
+      font-size: 13px;
+      min-height: 100vh;
+    }
+
+    /* ── Header ── */
+    header {
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+      padding: 10px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    header h1 {
+      font-size: 13px;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: var(--accent);
+      font-weight: normal;
+    }
+    #last-updated { color: var(--muted); font-size: 11px; }
+
+    /* ── Page layout ── */
+    .page { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+
+    /* ── Card ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 12px 14px;
+    }
+    .card-title {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 10px;
+    }
+
+    /* ── Status bar ── */
+    .status-bar { display: flex; align-items: center; gap: 24px; flex-wrap: wrap; }
+    .s-item { font-size: 12px; }
+    .s-item label { color: var(--muted); margin-right: 5px; }
+    .ok   { color: var(--allow); }
+    .down { color: var(--block); }
+
+    select {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 3px 8px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+    select:focus { outline: none; border-color: var(--accent); }
+
+    /* ── Counter cards ── */
+    .counters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .counter {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 3px;
+      padding: 14px;
+      text-align: center;
+    }
+    .counter .c-label {
+      font-size: 10px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .counter .c-value { font-size: 38px; font-weight: bold; line-height: 1; }
+    .counter .c-pct   { font-size: 10px; color: var(--muted); margin-top: 5px; }
+    .c-allow  .c-value { color: var(--allow); }
+    .c-block  .c-value { color: var(--block); }
+    .c-honey  .c-value { color: var(--honeypot); }
+    .c-deprio .c-value { color: var(--deprio); }
+
+    /* ── 2-column layouts ── */
+    .row-2     { display: grid; grid-template-columns: 1fr 1fr;      gap: 12px; }
+    .row-asym  { display: grid; grid-template-columns: 3fr 2fr;      gap: 12px; }
+
+    /* ── Charts ── */
+    .chart-wrap         { position: relative; height: 180px; }
+    .chart-wrap-small   { position: relative; height: 100px; }
+
+    /* ── Tables ── */
+    table { width: 100%; border-collapse: collapse; }
+    thead th {
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      color: var(--muted);
+      padding: 4px 6px;
+      border-bottom: 1px solid var(--border);
+      font-weight: normal;
+      text-align: left;
+      white-space: nowrap;
+    }
+    tbody td {
+      padding: 4px 6px;
+      border-bottom: 1px solid #161628;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+    tbody tr:last-child td { border-bottom: none; }
+    tbody tr:hover td { background: var(--row-hover); }
+    .empty td {
+      color: var(--muted);
+      text-align: center;
+      padding: 10px 6px;
+      font-style: italic;
+    }
+
+    /* ── Outcome tags ── */
+    .tag {
+      display: inline-block;
+      padding: 1px 5px;
+      border-radius: 2px;
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .tag-allow        { color: var(--allow);    border: 1px solid var(--allow);    }
+    .tag-block        { color: var(--block);    border: 1px solid var(--block);    }
+    .tag-honeypot     { color: var(--honeypot); border: 1px solid var(--honeypot); }
+    .tag-deprioritise { color: var(--deprio);   border: 1px solid var(--deprio);   }
+
+    /* ── Buttons ── */
+    .btn-unblock {
+      background: none;
+      border: 1px solid var(--block);
+      color: var(--block);
+      font-family: 'Courier New', monospace;
+      font-size: 10px;
+      letter-spacing: 1px;
+      padding: 1px 6px;
+      border-radius: 2px;
+      cursor: pointer;
+    }
+    .btn-unblock:hover { background: var(--block); color: #fff; }
+
+    /* ── IP rate badges ── */
+    .rate-badge {
+      display: inline-block;
+      background: #1a1a2e;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 2px 8px;
+      font-size: 11px;
+      margin: 2px;
+    }
+    .rate-badge.high { border-color: var(--block); color: var(--block); }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Traffic Inspection Dashboard</h1>
+  <span id="last-updated">--</span>
+</header>
+
+<div class="page">
+
+  <!-- Status + algorithm control -->
+  <div class="card">
+    <div class="status-bar">
+      <div class="s-item">
+        <label>IDMS</label><span id="s-idms" class="down">--</span>
+      </div>
+      <div class="s-item">
+        <label>Load Balancer</label><span id="s-lb" class="down">--</span>
+      </div>
+      <div class="s-item">
+        <label>Servers</label><span id="s-servers">--</span>
+      </div>
+      <div class="s-item" style="margin-left: auto">
+        <label>Algorithm</label>
+        <select id="algo-select" onchange="setAlgorithm(this.value)">
+          <option value="round_robin">round_robin</option>
+          <option value="source_hashing">source_hashing</option>
+          <option value="least_loaded">least_loaded</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- Traffic counters -->
+  <div class="counters">
+    <div class="counter c-allow">
+      <div class="c-label">Allow</div>
+      <div class="c-value" id="cnt-allow">0</div>
+      <div class="c-pct"  id="pct-allow">--</div>
+    </div>
+    <div class="counter c-block">
+      <div class="c-label">Block</div>
+      <div class="c-value" id="cnt-block">0</div>
+      <div class="c-pct"  id="pct-block">--</div>
+    </div>
+    <div class="counter c-honey">
+      <div class="c-label">Honeypot</div>
+      <div class="c-value" id="cnt-honeypot">0</div>
+      <div class="c-pct"  id="pct-honeypot">--</div>
+    </div>
+    <div class="counter c-deprio">
+      <div class="c-label">Deprioritise</div>
+      <div class="c-value" id="cnt-deprioritise">0</div>
+      <div class="c-pct"  id="pct-deprioritise">--</div>
+    </div>
+  </div>
+
+  <!-- Charts row -->
+  <div class="row-2">
+    <div class="card">
+      <div class="card-title">Requests per second — last 60s</div>
+      <div class="chart-wrap"><canvas id="chart-rps"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Server total requests</div>
+      <div class="chart-wrap"><canvas id="chart-servers"></canvas></div>
+    </div>
+  </div>
+
+  <!-- Events + Blocked IPs -->
+  <div class="row-asym">
+    <div class="card">
+      <div class="card-title">Recent events</div>
+      <table>
+        <thead>
+          <tr>
+            <th>Time</th>
+            <th>IP</th>
+            <th>Outcome</th>
+            <th>Rule</th>
+            <th>Inspect ms</th>
+            <th>Total ms</th>
+          </tr>
+        </thead>
+        <tbody id="events-tbody">
+          <tr class="empty"><td colspan="6">waiting for data</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="card">
+      <div class="card-title">Blocked IPs</div>
+      <table>
+        <thead>
+          <tr><th>IP</th><th>Rule</th><th>Expires</th><th></th></tr>
+        </thead>
+        <tbody id="blocked-tbody">
+          <tr class="empty"><td colspan="4">none</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Latency chart -->
+  <div class="card">
+    <div class="card-title">Rule engine inspection latency ms — last 100 events</div>
+    <div class="chart-wrap-small"><canvas id="chart-latency"></canvas></div>
+  </div>
+
+  <!-- Active IP rates -->
+  <div class="card">
+    <div class="card-title">Active IP request rates (requests in current 10s window)</div>
+    <div id="rates-container" style="min-height:24px; color:var(--muted); font-size:11px">
+      no active IPs
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+  // Global Chart.js defaults
+  Chart.defaults.color = '#5a5a78';
+  Chart.defaults.borderColor = '#161628';
+  Chart.defaults.font.family = "'Courier New', Courier, monospace";
+  Chart.defaults.font.size = 10;
+
+  function makeScales(yLabel) {
+    return {
+      x: {
+        grid: { color: '#161628' },
+        ticks: { color: '#5a5a78', maxRotation: 0 },
+      },
+      y: {
+        grid: { color: '#161628' },
+        ticks: { color: '#5a5a78' },
+        beginAtZero: true,
+        title: yLabel ? { display: true, text: yLabel, color: '#5a5a78', font: { size: 9 } } : undefined,
+      },
+    };
+  }
+
+  const BASE = {
+    responsive: true,
+    maintainAspectRatio: false,
+    animation: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: '#131325',
+        titleColor: '#5a5a78',
+        bodyColor: '#d0d0e0',
+        borderColor: '#252545',
+        borderWidth: 1,
+      },
+    },
+  };
+
+  // Requests per second
+  const rpsChart = new Chart(document.getElementById('chart-rps'), {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [{
+        data: [],
+        borderColor: '#60a5fa',
+        backgroundColor: 'rgba(96,165,250,0.07)',
+        borderWidth: 1.5,
+        pointRadius: 0,
+        fill: true,
+        tension: 0.3,
+      }],
+    },
+    options: { ...BASE, scales: makeScales('req/s') },
+  });
+
+  // Server total requests bar
+  const serverChart = new Chart(document.getElementById('chart-servers'), {
+    type: 'bar',
+    data: {
+      labels: ['server1', 'server2', 'server3', 'server4'],
+      datasets: [{
+        data: [0, 0, 0, 0],
+        backgroundColor: ['#4ade80', '#60a5fa', '#fb923c', '#facc15'],
+        borderWidth: 0,
+        borderRadius: 2,
+      }],
+    },
+    options: { ...BASE, scales: makeScales('requests') },
+  });
+
+  // Latency
+  const latencyChart = new Chart(document.getElementById('chart-latency'), {
+    type: 'line',
+    data: {
+      labels: [],
+      datasets: [{
+        data: [],
+        borderColor: '#facc15',
+        backgroundColor: 'rgba(250,204,21,0.05)',
+        borderWidth: 1,
+        pointRadius: 0,
+        fill: true,
+        tension: 0.2,
+      }],
+    },
+    options: {
+      ...BASE,
+      scales: {
+        x: { display: false },
+        y: { grid: { color: '#161628' }, ticks: { color: '#5a5a78' }, beginAtZero: true,
+             title: { display: true, text: 'ms', color: '#5a5a78', font: { size: 9 } } },
+      },
+    },
+  });
+
+  // ── Helpers ──────────────────────────────────────────────────────────────────
+
+  function fmtTime(ts) {
+    return new Date(ts * 1000).toTimeString().slice(0, 8);
+  }
+
+  function fmtExpiry(unblock_at) {
+    if (!unblock_at) return '-';
+    const secs = Math.round(unblock_at - Date.now() / 1000);
+    if (secs <= 0) return 'expired';
+    return secs + 's';
+  }
+
+  function tag(outcome) {
+    return `<span class="tag tag-${outcome}">${outcome}</span>`;
+  }
+
+  let _algoChanging = false;
+
+  // ── Data refresh ─────────────────────────────────────────────────────────────
+
+  async function refreshOverview() {
+    let d;
+    try {
+      const r = await fetch('/api/overview');
+      d = await r.json();
+    } catch (_) {
+      document.getElementById('last-updated').textContent = 'fetch error';
+      return;
+    }
+
+    // Status
+    const si = document.getElementById('s-idms');
+    si.textContent = d.idms_healthy ? 'healthy' : 'down';
+    si.className   = d.idms_healthy ? 'ok' : 'down';
+
+    const sl = document.getElementById('s-lb');
+    sl.textContent = d.lb_healthy ? 'healthy' : 'down';
+    sl.className   = d.lb_healthy ? 'ok' : 'down';
+
+    document.getElementById('s-servers').textContent = `${d.healthy_servers}/4`;
+
+    if (!_algoChanging) {
+      document.getElementById('algo-select').value = d.algorithm;
+    }
+
+    // Counters + percentages
+    const c = d.counters || {};
+    const total = (c.allow || 0) + (c.block || 0) + (c.honeypot || 0) + (c.deprioritise || 0);
+    for (const k of ['allow', 'block', 'honeypot', 'deprioritise']) {
+      const v = c[k] || 0;
+      document.getElementById(`cnt-${k}`).textContent = v;
+      document.getElementById(`pct-${k}`).textContent =
+        total > 0 ? ((v / total) * 100).toFixed(1) + '%' : '--';
+    }
+
+    // Req/sec chart
+    const series = d.req_series || [];
+    rpsChart.data.labels = series.map(s => fmtTime(s.t));
+    rpsChart.data.datasets[0].data = series.map(s => s.count);
+    rpsChart.update('none');
+
+    // Server chart
+    const loads = d.server_loads || [];
+    serverChart.data.labels = loads.map(s => s.name);
+    serverChart.data.datasets[0].data = loads.map(s => s.total_requests);
+    serverChart.update('none');
+
+    // Latency chart
+    const lat = d.latency_series || [];
+    latencyChart.data.labels = lat.map((_, i) => i);
+    latencyChart.data.datasets[0].data = lat.map(l => l.ms);
+    latencyChart.update('none');
+
+    // Active IP rates
+    const rates = d.rates || {};
+    const rateKeys = Object.keys(rates);
+    const rateEl = document.getElementById('rates-container');
+    if (!rateKeys.length) {
+      rateEl.textContent = 'no active IPs';
+    } else {
+      const limit = 200;
+      rateEl.innerHTML = rateKeys
+        .sort((a, b) => rates[b] - rates[a])
+        .map(ip => {
+          const count = rates[ip];
+          const cls = count > limit * 0.8 ? 'rate-badge high' : 'rate-badge';
+          return `<span class="${cls}">${ip} — ${count}</span>`;
+        })
+        .join('');
+    }
+
+    document.getElementById('last-updated').textContent =
+      'updated ' + new Date().toTimeString().slice(0, 8);
+  }
+
+  async function refreshEvents() {
+    let events;
+    try {
+      const r = await fetch('/api/events?n=20');
+      events = await r.json();
+    } catch (_) { return; }
+
+    const tbody = document.getElementById('events-tbody');
+    if (!Array.isArray(events) || !events.length) {
+      tbody.innerHTML = '<tr class="empty"><td colspan="6">no events yet</td></tr>';
+      return;
+    }
+    tbody.innerHTML = events.map(e =>
+      `<tr>
+        <td>${fmtTime(e.ts)}</td>
+        <td style="color:var(--muted)">${e.ip || '-'}</td>
+        <td>${tag(e.outcome)}</td>
+        <td>${e.rule_name || '-'}</td>
+        <td>${e.inspect_ms != null ? e.inspect_ms.toFixed(2) : '-'}</td>
+        <td>${e.total_ms  != null ? e.total_ms.toFixed(1)   : '-'}</td>
+      </tr>`
+    ).join('');
+  }
+
+  async function refreshBlocked() {
+    let blocked;
+    try {
+      const r = await fetch('/api/blocked');
+      blocked = await r.json();
+    } catch (_) { return; }
+
+    const tbody = document.getElementById('blocked-tbody');
+    if (!Array.isArray(blocked) || !blocked.length) {
+      tbody.innerHTML = '<tr class="empty"><td colspan="4">none</td></tr>';
+      return;
+    }
+    tbody.innerHTML = blocked.map(b =>
+      `<tr>
+        <td style="color:var(--block)">${b.ip}</td>
+        <td>${b.rule_name || '-'}</td>
+        <td>${fmtExpiry(b.unblock_at)}</td>
+        <td>
+          <button class="btn-unblock" onclick="unblock('${b.ip}')">unblock</button>
+        </td>
+      </tr>`
+    ).join('');
+  }
+
+  // ── Actions ───────────────────────────────────────────────────────────────────
+
+  async function setAlgorithm(algo) {
+    _algoChanging = true;
+    try {
+      await fetch('/api/algorithm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ algorithm: algo }),
+      });
+    } catch (_) { /* ignore */ }
+    setTimeout(() => { _algoChanging = false; }, 3000);
+  }
+
+  async function unblock(ip) {
+    try {
+      await fetch('/api/unblock/' + ip, { method: 'POST' });
+      await refreshBlocked();
+    } catch (_) { /* ignore */ }
+  }
+
+  // ── Bootstrap ─────────────────────────────────────────────────────────────────
+
+  refreshOverview();
+  refreshEvents();
+  refreshBlocked();
+
+  setInterval(refreshOverview, 2000);
+  setInterval(refreshEvents,   2000);
+  setInterval(refreshBlocked,  5000);
+</script>
+</body>
+</html>
