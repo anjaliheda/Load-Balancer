@@ -91,7 +91,6 @@ services:
     environment:
       - LOAD_BALANCER_URL=http://loadbalancer:5000
       - HONEYPOT_URL=http://honeypot:5002
-      - API_KEY=0586c419972ff7e63d40d6e0c87bb494fcd04dcbd770089724339fed98f81a5c
       - SQLITE_PATH=/data/idms.db
     volumes:
       - idms_data:/data

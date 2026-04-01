@@ -43,7 +43,7 @@ def is_server_healthy(server):
             if server_states[server]['consecutive_failures'] > 3:
                 server_states[server]['healthy'] = False
             return False
-    except:
+    except Exception:
         server_states[server]['consecutive_failures'] += 1
         backoff_time = min(30, 2 ** server_states[server]['consecutive_failures'])
         if time.time() - server_states[server]['last_check'] < backoff_time:
@@ -127,7 +127,7 @@ def choose_server_least_loaded():
                 else:
                     server_states[server]['current_load'] += 1
                     healthy_servers.append((server, server_states[server]['current_load']))
-            except:
+            except Exception:
                 server_states[server]['current_load'] += 2
                 healthy_servers.append((server, server_states[server]['current_load']))
     if not healthy_servers:

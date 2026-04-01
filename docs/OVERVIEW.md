@@ -73,9 +73,9 @@ The rule engine checks every request against a fixed set of known-bad patterns. 
 - *Is the API key missing or malformed?* Requests without valid credentials are blocked.
 - *Is this IP probing many different URLs quickly?* More than 5 distinct paths in 10 seconds suggests reconnaissance.
 
-**Layer 2 — Anomaly engine** 
+**Layer 2 — Anomaly engine** ✅
 
-The anomaly engine learns what "normal" looks like for each IP address over time — how many requests per second they typically send, what size payloads they usually send. When a request deviates significantly from that learned baseline, it is scored as suspicious. This catches attacks that are designed to stay just under the rule thresholds.
+The anomaly engine learns what "normal" looks like for each IP address over time — specifically, how frequently requests arrive. When a request arrives significantly faster than the established baseline (measured using a modified Z-score of inter-arrival times), it is scored as suspicious. This catches attacks designed to stay just under the rule thresholds — such as a slow flood that ramps up gradually. Detection is directional: a client pausing between requests scores zero (not an attack); only acceleration triggers the alarm.
 
 ### What happens to flagged traffic
 
@@ -83,7 +83,7 @@ The anomaly engine learns what "normal" looks like for each IP address over time
 |---|---|---|
 | **Block** | 403 error returned immediately | Rate floods, missing auth, oversized payloads — clear attacks |
 | **Honeypot** | Silently redirected to a fake server that logs everything | Injection attacks — we want to capture the payload, not alert the attacker |
-| **Deprioritise** | Forwarded normally but tagged with `X-IDMS-Tag` | Suspicious behaviour that isn't conclusive — forward but mark for monitoring |
+| **Deprioritise** | Forwarded with `X-IDMS-Tag: deprioritised`; repeated strikes escalate to block | Suspicious behaviour that isn't conclusive — forward but mark for monitoring. After 20 such events in 120s from the same IP, auto-block for 120s. |
 | **Allow** | Forwarded to load balancer unchanged | Clean request |
 
 ### The honeypot
@@ -144,9 +144,10 @@ Load-Balancer/
 │
 ├── IDMS/
 │   ├── idms/
-│   │   ├── rule_engine.py     Phase 1: pattern-matching detection
-│   │   ├── idms_proxy.py      Intercepts all traffic on port 5001
-│   │   └── anomaly_engine.py  Phase 2: statistical baseline detection (coming)
+│   │   ├── rule_engine.py          Phase 1: pattern-matching detection
+│   │   ├── anomaly_engine.py       Phase 2: IAT statistical baseline detection
+│   │   ├── mitigation_controller.py Phase 3: full pipeline — block/honeypot/deprioritise/escalation
+│   │   └── idms_proxy.py           Thin HTTP shell — parses requests, delegates to controller
 │   └── honeypot/
 │       └── honeypot.py        Captures injection payloads, returns fake success
 │
@@ -169,8 +170,8 @@ Load-Balancer/
 | Phase | What | Status |
 |---|---|---|
 | 1 | Rule-based detection (5 rules), IDMS proxy, honeypot | ✅ Complete & verified |
-| 2 | Anomaly engine — learned per-IP baselines | ⬜ Next |
-| 3 | MitigationController — combines verdicts, manages timed blocks | ⬜ |
+| 2 | Anomaly engine — per-IP IAT-based statistical detection (modified Z-score) | ✅ Complete |
+| 3 | MitigationController — full pipeline ownership, escalation, severity-based block durations | ✅ Complete |
 | 4 | Attack simulation client — flood, SQLi, slow-rate, mixed modes | ⬜ |
 | 5 | Real-time dashboard — live traffic charts, algorithm switcher, blocked IP management | ✅ Complete |
 | 6 | Four-scenario experimental evaluation | ⬜ |

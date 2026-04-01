@@ -297,11 +297,11 @@ def inspect(
     or a clean allow result if nothing fires.
 
     Priority order (highest first):
-      1. SQLi / injection          — critical, always honeypot
-      2. Rate limit                — high, block
-      3. Endpoint scan             — high, deprioritise
-      4. Payload size              — medium, block
-      5. Header validation         — medium, block
+      1. Header validation (auth)  — medium, block  ← unauthenticated requests never inspected further
+      2. SQLi / injection          — critical, always honeypot
+      3. Rate limit                — high, block
+      4. Endpoint scan             — high, deprioritise
+      5. Payload size              — medium, block
 
     Inspection latency is measured and attached to the result.
     """

@@ -1,0 +1,255 @@
+DEMO SCRIPT — Traffic Inspection & Mitigation System
+=====================================================
+Audience: Professor (non-technical)
+Duration: ~10–15 minutes
+
+
+────────────────────────────────────────────────────────────
+BEFORE THE DEMO
+────────────────────────────────────────────────────────────
+
+1. Start the system (do this a few minutes before she arrives):
+
+   docker-compose up --build -d
+
+2. Open the dashboard in a browser:
+
+   http://localhost:8080
+
+3. Wait until the top status bar shows:
+   - IDMS     → healthy  (green dot)
+   - Load Balancer → healthy  (green dot)
+   - Servers online → 4 / 4
+
+   If any are red, wait 10–15 seconds and refresh. Docker is still starting up.
+
+4. Make sure all counters read 0. If not, click
+   "Reset — Unblock All Demo IPs" to clear leftover state.
+
+
+────────────────────────────────────────────────────────────
+OPENING EXPLANATION (say this before touching anything)
+────────────────────────────────────────────────────────────
+
+"This is a load balancer — it sits in front of four servers and
+ distributes incoming requests across them so no single server
+ gets overwhelmed.
+
+ The problem is that not all traffic is legitimate. Attackers can
+ send fake API keys, inject malicious code into requests, or just
+ flood the system with thousands of requests per second to bring
+ it down.
+
+ What I've built is an IDMS — an Intrusion Detection and
+ Mitigation System — that sits in front of the load balancer and
+ inspects every single request before it reaches a server.
+
+ It works in three layers. I'll demonstrate each one."
+
+
+────────────────────────────────────────────────────────────
+PHASE 1 — RULE ENGINE  (purple badge in the dashboard)
+────────────────────────────────────────────────────────────
+
+What it is:
+  A set of hard rules that run on every request in microseconds.
+  No learning needed — it either matches a pattern or it doesn't.
+
+--- Demo 1a: Wrong API Key ---
+
+Say:
+  "Every request must include a valid API key. Watch what happens
+   when someone sends the wrong one."
+
+Action: Click  [Wrong API Key]
+
+Watch the events table:
+  - A new row appears immediately
+  - Result column: red "Blocked" pill
+  - Detection column: purple P1 badge + "Wrong API Key"
+  - What happened: "API key did not match — access denied"
+  - Block counter: goes up by 1
+
+Say:
+  "That was caught and rejected before it even reached the load
+   balancer. Zero compute wasted on the real servers."
+
+Click [Reset] before the next demo.
+
+--- Demo 1b: SQL Injection ---
+
+Say:
+  "A common attack is SQL injection — the attacker embeds database
+   commands inside a normal-looking request, hoping the server will
+   execute them. Watch what happens."
+
+Action: Click  [SQL Injection]
+
+Watch the events table:
+  - Result column: orange "Honeypot" pill
+  - Detection column: purple P1 + "SQL/NoSQL Injection"
+  - What happened: "Attack pattern found in the request body —
+                    sent to honeypot instead of real server"
+
+Say:
+  "Notice it wasn't just blocked — it was redirected to a honeypot.
+   That's a decoy server. The attacker gets back a fake success
+   response, so they think their attack worked and keep sending more.
+   Meanwhile we're capturing everything they send, and the real
+   servers never see a single malicious byte."
+
+Click [Reset] before the next demo.
+
+--- Demo 1c: Rate Flood ---
+
+Say:
+  "A denial-of-service attack just hammers the system with as many
+   requests as possible to exhaust its resources. I'm going to
+   send 250 requests in under a second from the same IP."
+
+Action: Click  [Rate Flood (250 req)]
+
+Watch the dashboard:
+  - The Requests chart spikes sharply
+  - Block counter climbs rapidly (will reach ~50+ blocks)
+  - Events table fills with red "Blocked" rows
+  - Detection column shows "Rate Flood"
+
+Say:
+  "The rule engine allows up to 200 requests per 10-second window
+   per IP. Once that threshold is crossed, the IP is blocked for
+   5 minutes and all further requests are rejected immediately —
+   the attacker can't get anything through."
+
+Point to Blocked IPs panel:
+  "You can see the attacker's IP listed here with a countdown timer
+   showing when the block expires. I can manually unblock it if
+   needed, or just let the timer run."
+
+Click [Reset].
+
+
+────────────────────────────────────────────────────────────
+PHASE 2 — ANOMALY ENGINE  (green badge in the dashboard)
+────────────────────────────────────────────────────────────
+
+What it is:
+  Unlike Phase 1, this layer doesn't use fixed rules.
+  It watches each IP's request timing over time, builds a baseline
+  of what "normal" looks like for that IP, and flags behaviour
+  that deviates significantly from that baseline.
+  This catches sophisticated attacks that stay under fixed limits.
+
+Say:
+  "Phase 1 is good at catching known attack patterns. But a smart
+   attacker might spread their flood across a longer time period,
+   staying just under the rate limit. Phase 2 catches that.
+
+   I need to teach the system what normal traffic from this IP
+   looks like first. I'll send 60 requests at a steady pace."
+
+--- Demo 2a: Warm Up ---
+
+Action: Click  [1 · Warm Up Baseline]
+
+Watch:
+  - Status bar says "Building anomaly baseline — 60 requests at
+    normal speed (~3 seconds)…"
+  - Allow counter climbs from 0 to ~60 over ~3 seconds
+  - Events table fills with green "Allowed" rows
+
+Say:
+  "The anomaly engine is recording the time gap between each request.
+   After enough samples, it has a statistical model of this IP's
+   normal behaviour — how frequently they send requests."
+
+Wait until the Allow counter stops climbing (~3 seconds).
+
+--- Demo 2b: Burst Attack ---
+
+Say:
+  "Now I'll simulate a burst attack — same IP, same request type,
+   but sent 10 times faster than the established baseline."
+
+Action: Click  [2 · Trigger Burst Attack]
+
+Watch the events table:
+  - New rows appear with green P2 badge "Burst Anomaly"
+  - Result: yellow "Flagged" pill
+  - What happened: "Requests arriving much faster than the learned
+                    baseline for this IP"
+
+Say:
+  "The anomaly engine detected that the inter-arrival time between
+   requests dropped far below the learned baseline. It doesn't need
+   a rule that says '200 req/s is too many' — it just knows this
+   is abnormal for this particular IP.
+
+   These requests are flagged and forwarded with a warning tag, not
+   blocked outright — because it could be a legitimate spike in
+   traffic. But if this keeps happening..."
+
+Action: Click  [2 · Trigger Burst Attack]  again (2–3 more times)
+
+Watch:
+  - Flagged counter keeps climbing
+  - Eventually a red "Blocked" row appears with P3 pink badge
+    "Escalation Block"
+  - What happened: "Too many suspicious events — automatically
+                    upgraded to a full block"
+
+Say:
+  "That's Phase 3 — the mitigation controller. After 20 flagged
+   events within 2 minutes from the same IP, it automatically
+   escalates from 'suspicious' to 'fully blocked'. The system
+   learned on its own that this is not a normal traffic spike."
+
+Click [Reset].
+
+
+────────────────────────────────────────────────────────────
+CLOSING
+────────────────────────────────────────────────────────────
+
+Point to the counter cards:
+
+  "At a glance you can always see the health of the system:
+   - Green: legitimate traffic flowing through normally
+   - Red: attackers being rejected
+   - Orange: injections being trapped in the honeypot
+   - Amber: suspicious traffic being flagged
+
+   All of this happens before a single request touches a real server."
+
+Point to the algorithm selector:
+
+  "The load balancer itself supports three distribution algorithms —
+   round robin, source hashing, and least loaded — which I can
+   switch live from this dropdown."
+
+Say:
+  "The next phase of the project is a formal attack simulation and
+   evaluation, where I measure false positive rates, detection
+   latency, and throughput under each algorithm."
+
+
+────────────────────────────────────────────────────────────
+IF SOMETHING GOES WRONG
+────────────────────────────────────────────────────────────
+
+Dashboard shows "connection error" or red status:
+  → Run:  docker-compose ps
+  → Any container not "Up"?  Run:  docker-compose up -d
+  → Wait 15 seconds and refresh the browser
+
+Phase 2 burst doesn't show anomaly events:
+  → The 120-second anomaly window may have expired.
+  → Click Reset, then Warm Up again, then Burst immediately after.
+
+All counters already show high numbers:
+  → Click Reset to clear demo IPs, but counters are totals
+    since startup — that is fine, focus on new rows in the table.
+
+Need to fully reset everything:
+  → docker-compose down -v && docker-compose up -d
+  → This wipes the SQLite database and all in-memory state.

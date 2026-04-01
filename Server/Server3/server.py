@@ -5,6 +5,7 @@ import time
 import threading
 import os
 from pymongo import MongoClient
+from bson import ObjectId
 import random
 import string
 
@@ -177,8 +178,13 @@ def handle_request():
             update_data = data.get('update_data', {})
             update_data['updated_at'] = time.time()
             time.sleep(base_delay * 2.2)  # Database update operation
+            try:
+                object_id = ObjectId(user_id)
+            except Exception:
+                update_load(-1)
+                return jsonify({"error": "Invalid user_id format"}), 400
             result = data_collection.update_one(
-                {'_id': user_id}, 
+                {'_id': object_id},
                 {'$set': update_data}
             )
             result = result.modified_count

@@ -53,7 +53,7 @@ def _self_unblock():
 class PerformanceMetrics:
     """Track and analyze request performance metrics"""
     def __init__(self):
-        self.response_times = [] #dictionary(stores key value pairs)
+        self.response_times = []
         self.failed_requests = []  
         self.total_requests = 0
         self.server_distribution = defaultdict(list)  # Store response times per server
