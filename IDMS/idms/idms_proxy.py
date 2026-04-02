@@ -143,6 +143,11 @@ def attack_log():
     return jsonify(controller.get_attack_log(limit))
 
 
+@app.route("/idms/clear_log", methods=["POST"])
+def clear_log():
+    return jsonify(controller.clear_log())
+
+
 @app.route("/idms/config", methods=["GET"])
 def idms_config():
     return jsonify(controller.get_config())

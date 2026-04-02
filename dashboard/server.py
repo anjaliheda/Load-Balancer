@@ -35,7 +35,9 @@ _baseline_stop = threading.Event()   # set = stopped
 # demonstrated — no warmup button needed.
 
 def _run_baseline():
-    """Steady 20 req/s from the anomaly IP, runs until _baseline_stop is set.
+    """Steady ~10 req/s from the anomaly IP, runs until _baseline_stop is set.
+    Rate is kept well under the 200/10s rate limit so burst requests (50 extra)
+    don't trigger rate_limit instead of anomaly detection.
     Backs off automatically when the IP is blocked (e.g. after escalation)
     so blocked events don't flood the dashboard during the demo."""
     headers = {
@@ -52,7 +54,7 @@ def _run_baseline():
                 continue
         except Exception:
             pass
-        _baseline_stop.wait(timeout=0.05)   # 50ms → ~20 req/s
+        _baseline_stop.wait(timeout=0.10)   # 100ms → ~10 req/s (stays under 200/10s rate limit)
 
 
 def _auto_start_baseline():
@@ -322,22 +324,22 @@ def api_demo():
                        "IAT drops from ~50ms baseline to ~1ms — watch for 'Burst Anomaly' in Detections."
         })
 
-    # ── Reset: unblock all demo IPs ──────────────────────────────────────────
-    # Unblocks all four demo IPs. The anomaly baseline for 10.10.0.4 is cleared
-    # by the unblock call, but the auto-baseline thread will rebuild it within
-    # ~15s (300 samples at 20 req/s) so Phase 2 can be repeated shortly after.
+    # ── Reset: clear history + unblock all demo IPs ──────────────────────────
     if scenario == "reset":
-        unblocked = []
+        # 1. Wipe detection log, metrics ring, and all blocks in one call
+        try:
+            http.post(f"{IDMS_URL}/idms/clear_log", timeout=5)
+        except Exception:
+            pass
+        # 2. Also reset anomaly/rule state for each demo IP individually
         for ip in DEMO_IPS.values():
             try:
-                r = http.post(f"{IDMS_URL}/idms/unblock/{ip}", timeout=3)
-                if r.status_code == 200:
-                    unblocked.append(ip)
+                http.post(f"{IDMS_URL}/idms/unblock/{ip}", timeout=3)
             except Exception:
                 pass
         return jsonify({
-            "message": f"Reset all demo IPs ({len(unblocked)} unblocked). "
-                       "Baseline rebuilds automatically in ~15s — then burst is ready again."
+            "message": "Cleared all history and unblocked all demo IPs. "
+                       "Baseline rebuilds in ~15s — then Phase 2 is ready again."
         })
 
     return jsonify({"message": "Unknown scenario."}), 400

@@ -55,19 +55,19 @@ ANOMALY_CONFIG: dict = {
     "window_seconds":           30,
 
     # Warm-up period — no scoring until at least this many samples exist.
-    # 300 is intentional: the rate-limit rule fires at 200 requests, so any
-    # short-lived attack IP (flood demo, Phase 6 attack client) is blocked
-    # before it accumulates enough samples to score.  Only IPs that send steady
-    # long-running traffic (the anomaly demo IP, legitimate clients) ever warm up,
-    # which is exactly when anomaly scoring should activate.
-    "min_baseline_samples":     300,
+    # 150 balances two constraints:
+    #   • High enough that short-lived attack IPs (flood: blocked at 200 req)
+    #     never warm up — flood IP sends ~250 in 2.5s but gets blocked at 200.
+    #   • Low enough that the anomaly demo IP (~10 req/s baseline) warms up
+    #     within ~15s so the burst demo is ready quickly.
+    "min_baseline_samples":     150,
 
     # Modified Z-score threshold.
-    # IAT scoring is directional (burst-only), so pauses between algorithm runs
-    # no longer inflate scores. 5.0 is calibrated to catch genuine burst attacks
-    # (IAT dropping to ~5ms against a 50ms baseline scores ≈ 30) while giving
-    # enough headroom for natural jitter in legitimate traffic.
-    "zscore_threshold":         5.0,
+    # Lowered to 1.5 for the Docker demo environment: Windows Docker Desktop adds
+    # 20–80ms of variable latency, which widens the IAT baseline distribution and
+    # increases MAD. With high MAD, concurrent burst requests (sub-ms IAT) only
+    # produce Z-scores of ~1.5–2.5, so 5.0 was unreachable in practice.
+    "zscore_threshold":         1.5,
 
     # Escalated threshold — scores above this jump to "high" severity
     "zscore_high_multiplier":   1.5,

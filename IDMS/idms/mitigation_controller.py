@@ -44,10 +44,10 @@ MITIGATION_CONFIG: dict = {
     "block_duration_critical": 900,
 
     # Escalation: N deprioritise strikes within T seconds → timed block
-    # Threshold is 5: burst requests contaminate their own baseline after ~5 samples,
-    # so Z-scores drop quickly. 5 is enough to demonstrate escalation reliably.
+    # Threshold is 8: provides a small buffer against occasional jitter false positives
+    # while still firing reliably when 50 concurrent burst requests arrive.
     # Block duration is short (30s) so the demo can be repeated without a long wait.
-    "escalation_strikes":        5,
+    "escalation_strikes":        8,
     "escalation_window_seconds": 120,
     "escalation_block_duration": 30,
 }
@@ -362,6 +362,23 @@ class MitigationController:
             ).fetchall()
             conn.close()
         return [dict(r) for r in rows]
+
+    def clear_log(self) -> dict:
+        """Wipe the detection log and reset in-memory metrics. Called by the demo Reset button."""
+        with _db_lock:
+            conn = self._db()
+            conn.execute("DELETE FROM detection_log")
+            conn.execute("UPDATE ip_reputation SET status='clean', blocked_at=NULL, unblock_at=NULL "
+                         "WHERE status IN ('blocked','flagged')")
+            conn.commit()
+            conn.close()
+        with _metrics_lock:
+            _metrics_ring.clear()
+            _counters.clear()
+        with _strike_lock:
+            _strike_windows.clear()
+        logger.info("CLEAR_LOG | detection log and metrics wiped")
+        return {"cleared": True}
 
     def get_config(self) -> dict:
         return {
