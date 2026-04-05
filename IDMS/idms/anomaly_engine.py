@@ -296,6 +296,36 @@ def reset_state_for_ip(client_ip: str) -> None:
     logger.info("ANOMALY | cleared baseline for %s", client_ip)
 
 
+def reset_all() -> None:
+    """Clear ALL per-IP baselines. Called by clear_log for full demo reset."""
+    with _state_lock:
+        _ip_states.clear()
+    logger.info("ANOMALY | cleared all per-IP baselines")
+
+
+def _prune_stale_states() -> None:
+    """Remove per-IP state for IPs with no samples in the current window.
+    Prevents unbounded memory growth from IPs that stop sending traffic."""
+    cutoff = time.time() - ANOMALY_CONFIG["window_seconds"]
+    with _state_lock:
+        stale = [ip for ip, st in _ip_states.items()
+                 if not st.samples or st.samples[-1][0] < cutoff]
+        for ip in stale:
+            del _ip_states[ip]
+    if stale:
+        logger.debug("ANOMALY | pruned %d stale IP states", len(stale))
+
+
+def _prune_loop():
+    """Background thread: prune stale IP states every 60 seconds."""
+    while True:
+        time.sleep(60)
+        _prune_stale_states()
+
+
+threading.Thread(target=_prune_loop, daemon=True).start()
+
+
 def get_anomaly_snapshot() -> dict:
     """
     Return per-IP baseline stats for the /idms/metrics endpoint.

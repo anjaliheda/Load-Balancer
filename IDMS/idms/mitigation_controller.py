@@ -26,9 +26,9 @@ import requests as http
 from flask import jsonify
 
 from rule_engine import inspect as rule_inspect, get_current_rates, RULE_CONFIG
-from rule_engine import reset_state_for_ip as rule_reset
+from rule_engine import reset_state_for_ip as rule_reset, reset_all as rule_reset_all
 from anomaly_engine import score as anomaly_score, get_anomaly_snapshot, ANOMALY_CONFIG
-from anomaly_engine import reset_state_for_ip as anomaly_reset
+from anomaly_engine import reset_state_for_ip as anomaly_reset, reset_all as anomaly_reset_all
 
 logger = logging.getLogger("mitigation_controller")
 
@@ -83,6 +83,7 @@ class MitigationController:
         self.lb_url       = lb_url
         self.honeypot_url = honeypot_url
         self.db_path      = db_path
+        self._persistent_conn = None
         self._init_db()
 
     # ── Full request pipeline ─────────────────────────────────────────────────
@@ -253,7 +254,6 @@ class MitigationController:
                 (ip, rule_name, now, now + duration_seconds, now),
             )
             conn.commit()
-            conn.close()
         logger.warning("BLOCKED ip=%s for %ds reason=%s", ip, duration_seconds, rule_name)
 
     def _is_blocked(self, ip: str) -> bool:
@@ -264,7 +264,6 @@ class MitigationController:
             row = conn.execute(
                 "SELECT status, unblock_at FROM ip_reputation WHERE ip=?", (ip,)
             ).fetchone()
-            conn.close()
 
         if row is None or row["status"] != "blocked":
             return False
@@ -285,7 +284,6 @@ class MitigationController:
                 (ip,),
             )
             conn.commit()
-            conn.close()
         rule_reset(ip)
         anomaly_reset(ip)
         with _strike_lock:
@@ -350,7 +348,6 @@ class MitigationController:
                 "SELECT ip, rule_name, blocked_at, unblock_at, hit_count "
                 "FROM ip_reputation WHERE status='blocked' ORDER BY blocked_at DESC"
             ).fetchall()
-            conn.close()
         return [dict(r) for r in rows]
 
     def get_attack_log(self, limit: int = 200) -> list:
@@ -360,24 +357,25 @@ class MitigationController:
             rows = conn.execute(
                 "SELECT * FROM detection_log ORDER BY ts DESC LIMIT ?", (limit,)
             ).fetchall()
-            conn.close()
         return [dict(r) for r in rows]
 
     def clear_log(self) -> dict:
-        """Wipe the detection log and reset in-memory metrics. Called by the demo Reset button."""
+        """Wipe the detection log and reset ALL state. Called by the demo Reset button."""
         with _db_lock:
             conn = self._db()
             conn.execute("DELETE FROM detection_log")
             conn.execute("UPDATE ip_reputation SET status='clean', blocked_at=NULL, unblock_at=NULL "
                          "WHERE status IN ('blocked','flagged')")
             conn.commit()
-            conn.close()
         with _metrics_lock:
             _metrics_ring.clear()
             _counters.clear()
         with _strike_lock:
             _strike_windows.clear()
-        logger.info("CLEAR_LOG | detection log and metrics wiped")
+        # Reset per-IP state inside detection engines so repeat demos start clean
+        rule_reset_all()
+        anomaly_reset_all()
+        logger.info("CLEAR_LOG | detection log, metrics, and engine state wiped")
         return {"cleared": True}
 
     def get_config(self) -> dict:
@@ -418,9 +416,12 @@ class MitigationController:
     # ── SQLite ────────────────────────────────────────────────────────────────
 
     def _db(self):
-        conn = sqlite3.connect(self.db_path, check_same_thread=False)
-        conn.row_factory = sqlite3.Row
-        return conn
+        """Return a persistent connection (reused across calls, protected by _db_lock)."""
+        if self._persistent_conn is None:
+            self._persistent_conn = sqlite3.connect(self.db_path, check_same_thread=False)
+            self._persistent_conn.row_factory = sqlite3.Row
+            self._persistent_conn.execute("PRAGMA journal_mode=WAL")
+        return self._persistent_conn
 
     def _init_db(self):
         os.makedirs(os.path.dirname(self.db_path), exist_ok=True)
@@ -451,7 +452,6 @@ class MitigationController:
             )
         """)
         conn.commit()
-        conn.close()
         logger.info("SQLite DB initialised at %s", self.db_path)
 
     def _log_detection(self, ts, ip, path, rule_name, severity, action, detail, inspect_ms, total_ms):
@@ -474,4 +474,3 @@ class MitigationController:
                 (ip, rule_name, ts),
             )
             conn.commit()
-            conn.close()

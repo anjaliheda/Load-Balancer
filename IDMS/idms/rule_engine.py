@@ -121,15 +121,14 @@ def _check_rate_limit(client_ip: str, ts: float) -> Optional[DetectionResult]:
             dq.popleft()
         dq.append(ts)
         count = len(dq)
-
-    if count > max_req:
-        return DetectionResult(
-            flagged=True,
-            rule_name="rate_limit",
-            severity="high",
-            detail=f"{count} requests in {window}s (limit {max_req})",
-            recommended="block",
-        )
+        if count > max_req:
+            return DetectionResult(
+                flagged=True,
+                rule_name="rate_limit",
+                severity="high",
+                detail=f"{count} requests in {window}s (limit {max_req})",
+                recommended="block",
+            )
     return None
 
 
@@ -264,15 +263,14 @@ def _check_endpoint_scan(client_ip: str, path: str, ts: float) -> Optional[Detec
             dq.popleft()
         dq.append((ts, path))
         distinct = len({entry[1] for entry in dq})
-
-    if distinct > max_distinct:
-        return DetectionResult(
-            flagged=True,
-            rule_name="endpoint_scan",
-            severity="high",
-            detail=f"{distinct} distinct endpoints probed in {window}s",
-            recommended="deprioritise",
-        )
+        if distinct > max_distinct:
+            return DetectionResult(
+                flagged=True,
+                rule_name="endpoint_scan",
+                severity="high",
+                detail=f"{distinct} distinct endpoints probed in {window}s",
+                recommended="deprioritise",
+            )
     return None
 
 
@@ -359,6 +357,15 @@ def reset_state_for_ip(client_ip: str) -> None:
     with _endpoint_lock:
         _endpoint_windows.pop(client_ip, None)
     logger.info("RULE_ENGINE | cleared state for %s", client_ip)
+
+
+def reset_all() -> None:
+    """Clear ALL per-IP sliding-window state. Called by clear_log for full demo reset."""
+    with _rate_lock:
+        _rate_windows.clear()
+    with _endpoint_lock:
+        _endpoint_windows.clear()
+    logger.info("RULE_ENGINE | cleared all per-IP state")
 
 
 def get_current_rates() -> dict:

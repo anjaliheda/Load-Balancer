@@ -602,6 +602,7 @@
   }
 
   let _algoChanging = false;
+  let _algoTimeout  = null;
 
   // ── Refresh functions ─────────────────────────────────────────────────────
 
@@ -745,7 +746,8 @@
         body: JSON.stringify({ algorithm: algo }),
       });
     } catch (_) {}
-    setTimeout(() => { _algoChanging = false; }, 3000);
+    if (_algoTimeout) clearTimeout(_algoTimeout);
+    _algoTimeout = setTimeout(() => { _algoChanging = false; _algoTimeout = null; }, 3000);
   }
 
   async function unblock(ip) {
@@ -789,10 +791,16 @@
   refreshAllowed();
   refreshBlocked();
 
-  setInterval(refreshOverview,    2000);
-  setInterval(refreshDetections,  2000);
-  setInterval(refreshAllowed,     2000);
-  setInterval(refreshBlocked,     3000);
+  // Store interval IDs so they can be cleaned up on page unload
+  const _intervals = [
+    setInterval(refreshOverview,    2000),
+    setInterval(refreshDetections,  2000),
+    setInterval(refreshAllowed,     2000),
+    setInterval(refreshBlocked,     3000),
+  ];
+  window.addEventListener('beforeunload', () => {
+    _intervals.forEach(id => clearInterval(id));
+  });
 </script>
 </body>
 </html>

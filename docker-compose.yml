@@ -5,6 +5,7 @@ networks:
 volumes:
   idms_data:
   honeypot_data:
+  mongo_data:
 
 services:
 
@@ -14,46 +15,82 @@ services:
     container_name: database
     ports:
       - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
     networks:
       - loadbalancer-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
   # ── Backend servers ────────────────────────────────────────────────────────
   server1:
     build: ./Server/Server1
     container_name: server1
     depends_on:
-      - database
+      database:
+        condition: service_healthy
     networks:
       - loadbalancer-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health')\""]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
 
   server2:
     build: ./Server/Server2
     container_name: server2
     depends_on:
-      - database
+      database:
+        condition: service_healthy
     networks:
       - loadbalancer-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health')\""]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
 
   server3:
     build: ./Server/Server3
     container_name: server3
     depends_on:
-      - database
+      database:
+        condition: service_healthy
     networks:
       - loadbalancer-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health')\""]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
 
   server4:
     build: ./Server/Server4
     container_name: server4
     depends_on:
-      - database
+      database:
+        condition: service_healthy
     networks:
       - loadbalancer-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health')\""]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
 
   # ── Load balancer ──────────────────────────────────────────────────────────
   loadbalancer:
@@ -62,13 +99,23 @@ services:
     ports:
       - "5000:5000"
     depends_on:
-      - server1
-      - server2
-      - server3
-      - server4
+      server1:
+        condition: service_healthy
+      server2:
+        condition: service_healthy
+      server3:
+        condition: service_healthy
+      server4:
+        condition: service_healthy
     networks:
       - loadbalancer-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health')\""]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
 
   # ── Honeypot ───────────────────────────────────────────────────────────────
   honeypot:
@@ -81,6 +128,12 @@ services:
     networks:
       - loadbalancer-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5002/health')\""]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
 
   # ── IDMS proxy ─────────────────────────────────────────────────────────────
   idms:
@@ -95,11 +148,19 @@ services:
     volumes:
       - idms_data:/data
     depends_on:
-      - loadbalancer
-      - honeypot
+      loadbalancer:
+        condition: service_healthy
+      honeypot:
+        condition: service_healthy
     networks:
       - loadbalancer-net
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5001/health')\""]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
 
   # ── Dashboard ──────────────────────────────────────────────────────────────
   dashboard:
@@ -110,7 +171,8 @@ services:
     environment:
       - IDMS_URL=http://idms:5001
     depends_on:
-      - idms
+      idms:
+        condition: service_healthy
     networks:
       - loadbalancer-net
     restart: unless-stopped
@@ -120,7 +182,8 @@ services:
     build: ./Client
     container_name: client
     depends_on:
-      - idms
+      idms:
+        condition: service_healthy
     networks:
       - loadbalancer-net
     restart: "no"

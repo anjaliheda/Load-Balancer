@@ -3,7 +3,10 @@ import socket
 import math
 import time
 import threading
+import signal
+import sys
 import os
+import atexit
 from pymongo import MongoClient
 from bson import ObjectId
 import random
@@ -23,15 +26,24 @@ server_name = server_mapping.get(os.environ.get('HOSTNAME', hostname), hostname)
 
 # Database connection
 DATABASE_URL = os.environ.get('DATABASE_URL', 'mongodb://database:27017/loadbalancer')
-mongo_client = MongoClient(DATABASE_URL)
+mongo_client = MongoClient(DATABASE_URL, serverSelectionTimeoutMS=5000)
 db = mongo_client.get_database()
 requests_collection = db.requests
 data_collection = db.user_data
 
+
+def _shutdown_mongo():
+    """Close MongoDB connection on shutdown."""
+    try:
+        mongo_client.close()
+    except Exception:
+        pass
+
+atexit.register(_shutdown_mongo)
+
 # Server configuration
 MAX_CONCURRENT = 5          # Maximum concurrent requests before overload
 OVERLOAD_THRESHOLD = 8      # Threshold for server to start rejecting requests
-RECOVERY_TIME = 0.5         # Time in seconds to recover one unit of load
 
 # Server state
 class ServerState:
@@ -111,7 +123,6 @@ def handle_request():
     try:
         # Reject if server is severely overloaded
         if current_load > OVERLOAD_THRESHOLD:
-            update_load(-1)
             return jsonify({
                 "error": "Server overloaded",
                 "server": server_name,
@@ -160,16 +171,15 @@ def handle_request():
         elif task_type == 'db_create_user':
             user_data = data.get('user_data', {})
             user_data['created_at'] = time.time()
-            time.sleep(base_delay * 2)  # Database write operation
+            time.sleep(base_delay * 2)
             result = data_collection.insert_one(user_data)
             result = str(result.inserted_id)
 
         elif task_type == 'db_find_users':
             query = data.get('query', {})
-            limit = min(data.get('limit', 10), 100)  # Limit response size
-            time.sleep(base_delay * 2.5)  # Database query operation
+            limit = min(data.get('limit', 10), 100)
+            time.sleep(base_delay * 2.5)
             result = list(data_collection.find(query, limit=limit))
-            # Convert ObjectId to string for JSON serialization
             for doc in result:
                 doc['_id'] = str(doc['_id'])
 
@@ -177,11 +187,10 @@ def handle_request():
             user_id = data.get('user_id', '')
             update_data = data.get('update_data', {})
             update_data['updated_at'] = time.time()
-            time.sleep(base_delay * 2.2)  # Database update operation
+            time.sleep(base_delay * 2.2)
             try:
                 object_id = ObjectId(user_id)
             except Exception:
-                update_load(-1)
                 return jsonify({"error": "Invalid user_id format"}), 400
             result = data_collection.update_one(
                 {'_id': object_id},
@@ -191,19 +200,16 @@ def handle_request():
 
         elif task_type == 'db_aggregate':
             pipeline = data.get('pipeline', [])
-            time.sleep(base_delay * 3)  # Complex database operation
+            time.sleep(base_delay * 3)
             result = list(data_collection.aggregate(pipeline))
-            # Convert ObjectId to string for JSON serialization
             for doc in result:
                 if '_id' in doc:
                     doc['_id'] = str(doc['_id'])
 
         elif task_type == 'db_generate_data':
-            # Generate random data for testing
-            count = min(data.get('count', 10), 100)  # Limit for safety
-            time.sleep(base_delay * 3.5)  # Heavy operation
-            
-            # Generate random user records
+            count = min(data.get('count', 10), 100)
+            time.sleep(base_delay * 3.5)
+
             records = []
             for _ in range(count):
                 user = {
@@ -211,15 +217,14 @@ def handle_request():
                     'email': f"user_{random.randint(1000, 9999)}@example.com",
                     'age': random.randint(18, 80),
                     'active': random.choice([True, False]),
-                    'created_at': time.time() - random.randint(0, 86400 * 30)  # Up to 30 days ago
+                    'created_at': time.time() - random.randint(0, 86400 * 30)
                 }
                 records.append(user)
-            
+
             result = data_collection.insert_many(records)
             result = len(result.inserted_ids)
 
         else:
-            update_load(-1)  # Decrement load counter
             log_request_to_db(task_type, 0, None, "invalid_task")
             return jsonify({"error": "Invalid task type"}), 400
 
@@ -236,17 +241,16 @@ def handle_request():
             "processing_time": processing_time
         }
 
-        # Log successful request to database
         log_request_to_db(task_type, processing_time, result)
-
-        update_load(-1)  # Decrement load counter
         return jsonify(response)
 
     except Exception as e:
         processing_time = time.time() - start_time
         log_request_to_db(task_type, processing_time, str(e), "error")
-        update_load(-1)  # Decrement load counter
         return jsonify({"error": str(e)}), 500
+
+    finally:
+        update_load(-1)  # Always decrement — guaranteed even on crash/early return
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5000)

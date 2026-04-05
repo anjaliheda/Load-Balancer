@@ -14,6 +14,7 @@ import json
 import sqlite3
 import logging
 import threading
+import random
 from flask import Flask, request, jsonify
 
 logging.basicConfig(
@@ -98,12 +99,13 @@ def capture():
         conn.close()
 
     # Convincing fake response — mirrors real server output structure
+    # Randomize server name so attackers can't fingerprint the honeypot
     return jsonify({
         "status": "ok",
-        "server": "server1",
+        "server": random.choice(["Server-1", "Server-2", "Server-3", "Server-4"]),
         "result": None,
-        "processing_time": 0.001,
-        "load": 0,
+        "processing_time": round(random.uniform(0.05, 0.25), 3),
+        "load": random.randint(0, 3),
     }), 200
 
 
