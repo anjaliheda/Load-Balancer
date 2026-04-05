@@ -1,0 +1,350 @@
+{% extends "base.html" %}
+{% block title %}Anomaly Engine — IDMS Dashboard{% endblock %}
+
+{% block extra_css %}
+/* ── Pipeline ── */
+.arch-pipeline {
+  display: flex; align-items: center; justify-content: center; gap: 0; padding: 24px 0;
+}
+.pipe-node {
+  text-align: center; padding: 14px 20px; border-radius: 10px;
+  border: 2px solid var(--border); background: var(--card); min-width: 120px;
+}
+.pipe-node .pn-icon  { font-size: 24px; margin-bottom: 4px; }
+.pipe-node .pn-label { font-size: 12px; font-weight: 600; color: var(--text); }
+.pipe-node .pn-sub   { font-size: 11px; color: var(--muted); }
+.pipe-node.highlighted {
+  border-color: var(--p2); background: #ecfdf5;
+  box-shadow: 0 0 0 4px rgba(5,150,105,0.1);
+}
+.pipe-node.dimmed { opacity: 0.4; }
+.pipe-arrow {
+  width: 40px; height: 2px; background: var(--border); position: relative; margin: 0 -2px;
+}
+.pipe-arrow::after {
+  content: ''; position: absolute; right: -5px; top: -4px;
+  border: 5px solid transparent; border-left: 6px solid var(--border);
+}
+
+/* ── Concept cards ── */
+.concept-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.concept-card {
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 20px 24px; background: var(--card);
+}
+.concept-card .cc-title {
+  font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 8px;
+}
+.concept-card .cc-body {
+  font-size: 13px; color: var(--muted); line-height: 1.7;
+}
+
+/* ── Formula box ── */
+.formula-box {
+  background: #1a1d23; color: #e5e7eb; border-radius: 10px;
+  padding: 20px 24px; font-family: 'SF Mono', 'Consolas', monospace;
+  font-size: 14px; line-height: 2; overflow-x: auto;
+}
+.formula-box .fm-comment { color: #6b7280; }
+.formula-box .fm-keyword { color: #93c5fd; }
+.formula-box .fm-value   { color: #86efac; }
+.formula-box .fm-op      { color: #fbbf24; }
+
+/* ── Z-score visual ── */
+.zscore-visual {
+  display: flex; align-items: flex-end; gap: 3px;
+  height: 120px; padding: 16px 0;
+}
+.zbar {
+  flex: 1; border-radius: 3px 3px 0 0; min-width: 6px;
+  transition: all 0.3s; position: relative;
+}
+.zbar.baseline { background: #dbeafe; }
+.zbar.anomaly  { background: #fca5a5; }
+.zbar-label {
+  position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%);
+  font-size: 9px; color: var(--muted); white-space: nowrap;
+}
+
+/* ── Baseline status ── */
+.baseline-status {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 18px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--bg);
+}
+.bs-dot {
+  width: 10px; height: 10px; border-radius: 50%;
+}
+.bs-dot.warming { background: #fbbf24; animation: pulse 1.5s infinite; }
+.bs-dot.ready   { background: var(--allow); }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* ── Demo section ── */
+#anomaly-demo-status {
+  font-size: 13px; color: var(--muted); padding: 10px 14px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+  min-height: 38px; line-height: 1.5;
+}
+{% endblock %}
+
+{% block body %}
+<div class="page">
+
+  <div class="page-header">
+    <h2>Anomaly Engine <span style="color:var(--p2)">(Phase 2)</span></h2>
+    <p>Per-IP statistical baseline profiling &mdash; detects deviations the rule engine can't see</p>
+  </div>
+
+  <!-- Pipeline position -->
+  <div class="card">
+    <div class="card-title">Position in the pipeline</div>
+    <div class="arch-pipeline">
+      <div class="pipe-node dimmed">
+        <div class="pn-icon">&#x1F4BB;</div>
+        <div class="pn-label">Client</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-node dimmed">
+        <div class="pn-icon">&#x1F4CB;</div>
+        <div class="pn-label">Rule Engine</div>
+        <div class="pn-sub">Phase 1 passed</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-node highlighted">
+        <div class="pn-icon">&#x1F4CA;</div>
+        <div class="pn-label">Anomaly Engine</div>
+        <div class="pn-sub">Phase 2</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-node dimmed">
+        <div class="pn-icon">&#x1F6E1;</div>
+        <div class="pn-label">Mitigation</div>
+        <div class="pn-sub">Phase 3</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-node dimmed">
+        <div class="pn-icon">&#x2696;</div>
+        <div class="pn-label">Load Balancer</div>
+      </div>
+    </div>
+    <div class="highlight-box green">
+      The Anomaly Engine only runs on requests that <b>passed all rule checks</b>.
+      This keeps detection layers independent &mdash; each flagged event is attributed to exactly one source.
+      It answers the question: <em>"This request looks valid, but is the client behaving normally?"</em>
+    </div>
+  </div>
+
+  <!-- Why this exists -->
+  <div class="card">
+    <div class="card-title">Why rules alone aren't enough</div>
+    <div class="concept-grid">
+      <div class="concept-card">
+        <div class="cc-title">The gap in rule-based detection</div>
+        <div class="cc-body">
+          The rate limiter blocks IPs exceeding 200 req/10s. But what about an attacker sending 180 req/10s?
+          That's under the threshold &mdash; the rule engine sees nothing wrong.<br><br>
+          Or consider a legitimate client that normally sends 5 req/s suddenly jumping to 50 req/s.
+          Still under the rate limit, but a 10x change from their personal baseline is suspicious.
+        </div>
+      </div>
+      <div class="concept-card">
+        <div class="cc-title">Per-IP baseline profiling</div>
+        <div class="cc-body">
+          For each IP, we maintain a sliding window (last 30 seconds) of:
+          <ul style="margin:8px 0 0 18px;">
+            <li><b>Inter-arrival times (IAT)</b> &mdash; gap between consecutive requests</li>
+            <li><b>Payload sizes</b> &mdash; raw body bytes per request</li>
+          </ul>
+          After 150 samples, each new request is scored against this IP's own baseline.
+          A client with stable 100ms IAT suddenly sending at 1ms IAT gets flagged &mdash;
+          even though the global rate limit hasn't been reached.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Z-score explanation -->
+  <div class="card">
+    <div class="card-title">Modified Z-Score (Iglewicz &amp; Hoaglin, 1993)</div>
+    <div class="row-2">
+      <div>
+        <div class="formula-box">
+          <span class="fm-comment"># Modified Z-score formula</span><br>
+          <span class="fm-keyword">Z</span> <span class="fm-op">=</span> <span class="fm-value">0.6745</span> <span class="fm-op">&times;</span> <span class="fm-op">|</span><span class="fm-keyword">x</span> <span class="fm-op">-</span> <span class="fm-keyword">median</span>(baseline)<span class="fm-op">|</span> <span class="fm-op">/</span> <span class="fm-keyword">MAD</span>(baseline)<br><br>
+          <span class="fm-comment"># Where MAD = Median Absolute Deviation</span><br>
+          <span class="fm-keyword">MAD</span> <span class="fm-op">=</span> <span class="fm-keyword">median</span>(<span class="fm-op">|</span>x<sub>i</sub> <span class="fm-op">-</span> <span class="fm-keyword">median</span>(X)<span class="fm-op">|</span>)<br><br>
+          <span class="fm-comment"># 0.6745 normalises MAD to match standard deviation under normality</span><br>
+          <span class="fm-comment"># Threshold: Z &gt; <span class="fm-value">1.5</span> &rarr; flagged as anomalous</span>
+        </div>
+        <div style="margin-top:14px; font-size:13px; color:var(--muted); line-height:1.7;">
+          <b>Why modified Z-score instead of standard Z-score?</b><br>
+          Standard Z-score uses mean and standard deviation, which are heavily influenced by outliers.
+          A single burst request would shift the mean and inflate the std dev, making subsequent burst requests
+          look less anomalous. The modified version uses median and MAD, which are <b>robust to outliers</b> &mdash;
+          the baseline stays stable even when attack traffic is mixed in.
+        </div>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:8px;">
+          IAT Distribution: baseline vs. burst
+        </div>
+        <div class="zscore-visual" id="zscore-viz">
+          <!-- Generated by JS -->
+        </div>
+        <div style="display:flex; justify-content:space-between; margin-top:24px;">
+          <div style="display:flex; align-items:center; gap:6px;">
+            <div style="width:12px;height:12px;border-radius:2px;background:#dbeafe;"></div>
+            <span style="font-size:11px; color:var(--muted);">Baseline IAT (~100ms)</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:6px;">
+            <div style="width:12px;height:12px;border-radius:2px;background:#fca5a5;"></div>
+            <span style="font-size:11px; color:var(--muted);">Burst IAT (~1ms) &mdash; Z-score &gt; 1.5</span>
+          </div>
+        </div>
+
+        <div style="margin-top:20px;">
+          <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:8px;">Key design decisions</div>
+          <table>
+            <tbody>
+              <tr>
+                <td style="font-weight:600; white-space:nowrap;">Directional scoring</td>
+                <td style="color:var(--muted)">Only flags faster-than-baseline IAT. A pause (long IAT) is not an attack.</td>
+              </tr>
+              <tr>
+                <td style="font-weight:600; white-space:nowrap;">IAT-only weighting</td>
+                <td style="color:var(--muted)">Payload Z-score computed but weighted 0% &mdash; task types have naturally different sizes.</td>
+              </tr>
+              <tr>
+                <td style="font-weight:600; white-space:nowrap;">150-sample warmup</td>
+                <td style="color:var(--muted)">No scoring until baseline is stable. Flood IPs (blocked at 200) never warm up.</td>
+              </tr>
+              <tr>
+                <td style="font-weight:600; white-space:nowrap;">30s sliding window</td>
+                <td style="color:var(--muted)">Baseline adapts to legitimate rate changes within 30 seconds.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Baseline status + demo -->
+  <div class="card">
+    <div class="card-title">Live baseline status &amp; burst demo</div>
+
+    <div class="baseline-status" id="baseline-box">
+      <div class="bs-dot warming" id="bs-dot"></div>
+      <div>
+        <div style="font-size:13px; font-weight:600;" id="bs-label">Checking baseline status...</div>
+        <div style="font-size:12px; color:var(--muted);" id="bs-detail">Background traffic runs automatically from system start</div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px; display:flex; gap:12px; align-items:center;">
+      <button class="btn btn-green" onclick="burstDemo()" id="btn-burst">Trigger Burst Attack</button>
+      <span style="font-size:12px; color:var(--muted);">
+        Sends 50 concurrent requests from the baseline IP &mdash; IAT drops from ~100ms to &lt;1ms
+      </span>
+    </div>
+
+    <div id="anomaly-demo-status" style="margin-top:12px;">
+      The anomaly baseline builds automatically in the background at ~10 req/s.
+      Once 150 samples are collected (~15s after startup), the burst demo will trigger real detections.
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // ── Z-score visualization ──────────────────────────────────────────────────
+  (function() {
+    const viz = document.getElementById('zscore-viz');
+    // Simulate IAT distribution: baseline around 100ms, burst around 1ms
+    const bars = [];
+    // Baseline distribution (normal-ish around 100ms)
+    for (let i = 0; i < 30; i++) {
+      const iat = 60 + Math.random() * 80; // 60-140ms
+      bars.push({ value: iat, type: 'baseline' });
+    }
+    // Burst cluster (sub-ms)
+    for (let i = 0; i < 8; i++) {
+      const iat = 0.5 + Math.random() * 2; // 0.5-2.5ms
+      bars.push({ value: iat, type: 'anomaly' });
+    }
+    bars.sort((a, b) => a.value - b.value);
+
+    const maxVal = Math.max(...bars.map(b => b.value));
+    bars.forEach(b => {
+      const el = document.createElement('div');
+      el.className = 'zbar ' + b.type;
+      el.style.height = Math.max(4, (b.value / maxVal) * 100) + '%';
+      if (b.type === 'anomaly') el.style.height = '4%'; // tiny bars for burst
+      viz.appendChild(el);
+    });
+  })();
+
+  // ── Baseline status polling ────────────────────────────────────────────────
+  async function checkBaseline() {
+    try {
+      const r = await fetch('/api/overview');
+      const d = await r.json();
+      const anomaly = (d.rates || {});
+      // Check the anomaly snapshot from overview
+      const dot   = document.getElementById('bs-dot');
+      const label = document.getElementById('bs-label');
+      const detail = document.getElementById('bs-detail');
+
+      // Fetch full config to check anomaly state
+      const r2 = await fetch('/api/config');
+      const cfg = await r2.json();
+      const minSamples = (cfg.anomaly || {}).min_baseline_samples || 150;
+
+      // The overview endpoint includes anomaly snapshot
+      const r3 = await fetch('/api/overview');
+      const d3 = await r3.json();
+
+      // Look for anomaly IP baseline info (not directly in overview, approximate from counters)
+      const totalAllow = (d3.counters || {}).allow || 0;
+
+      if (totalAllow >= minSamples) {
+        dot.className = 'bs-dot ready';
+        label.textContent = 'Baseline ready \u2014 anomaly scoring is active';
+        detail.textContent = `${totalAllow} requests processed, scoring threshold: ${minSamples} samples`;
+      } else {
+        dot.className = 'bs-dot warming';
+        label.textContent = `Warming up \u2014 ${totalAllow} / ${minSamples} samples`;
+        detail.textContent = 'Background traffic is building the baseline automatically';
+      }
+    } catch (e) {
+      document.getElementById('bs-label').textContent = 'Cannot reach IDMS';
+    }
+  }
+  checkBaseline();
+  const _bsInterval = setInterval(checkBaseline, 3000);
+  window.addEventListener('beforeunload', () => clearInterval(_bsInterval));
+
+  // ── Burst demo ─────────────────────────────────────────────────────────────
+  async function burstDemo() {
+    const el = document.getElementById('anomaly-demo-status');
+    el.textContent = 'Sending 50 concurrent burst requests\u2026';
+    el.style.color = '#2563eb';
+
+    try {
+      const r = await fetch('/api/demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'burst' }),
+      });
+      const d = await r.json();
+      el.textContent = d.message || 'Done.';
+      el.style.color = '#16a34a';
+    } catch (e) {
+      el.textContent = 'Error: ' + e.message;
+      el.style.color = '#dc2626';
+    }
+  }
+</script>
+{% endblock %}

@@ -3,8 +3,6 @@ import socket
 import math
 import time
 import threading
-import signal
-import sys
 import os
 import atexit
 from pymongo import MongoClient

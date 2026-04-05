@@ -30,9 +30,7 @@ import logging
 import requests as http
 from flask import Flask, request, jsonify
 
-from mitigation_controller import MitigationController, MITIGATION_CONFIG
-from rule_engine import RULE_CONFIG
-from anomaly_engine import ANOMALY_CONFIG
+from mitigation_controller import MitigationController
 
 # ─────────────────────────────────────────────
 # Logging

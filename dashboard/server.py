@@ -81,7 +81,27 @@ threading.Thread(target=_auto_start_baseline, daemon=True).start()
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("index.html", active_page="live")
+
+
+@app.route("/loadbalancer")
+def page_loadbalancer():
+    return render_template("loadbalancer.html", active_page="lb")
+
+
+@app.route("/rules")
+def page_rules():
+    return render_template("rules.html", active_page="rules")
+
+
+@app.route("/anomaly")
+def page_anomaly():
+    return render_template("anomaly.html", active_page="anomaly")
+
+
+@app.route("/mitigation")
+def page_mitigation():
+    return render_template("mitigation.html", active_page="mitigation")
 
 
 @app.route("/api/overview")

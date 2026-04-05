@@ -2,7 +2,7 @@
 
 > **Status legend:** ✅ Implemented · 🔄 In progress · ⬜ Planned
 
-> **Phase 3 status:** `mitigation_controller.py` is implemented. The proxy is now a thin HTTP shell — all detection and mitigation logic lives in the controller. See [§9](#9-phase-implementation-plan) for details.
+> **Phase 4 status:** `attack_client.py` is implemented with five attack modes (flood, sqli, slow_rate, mixed, stress) and full CSV output. See [§9](#9-phase-implementation-plan) for details.
 
 ---
 
@@ -84,12 +84,12 @@ client
   └─▶ POST idms:5001/request
         └─ MitigationController.process()
               ├─ [0] IP block check        (SQLite — short-circuit, no detection run)
-              ├─ [1] rule_engine.inspect() (5 rules, auth-first)
+              ├─ [1] rule_engine.inspect() (6 rules, auth-first)
               │     ├─ _check_headers()    ← auth boundary (highest priority)
               │     ├─ _check_sqli()
-              │     ├─ _check_rate_limit()
+              │     ├─ _check_rate_limit() ← verdict made inside lock (race-condition-safe)
               │     ├─ _check_endpoint_scan()
-              │     └─ _check_payload_size()
+              │     └─ _check_payload_size()  (two sub-checks: raw bytes + list items)
               ├─ [2] anomaly_engine.score() (only when [1] returns clean)
               └─ [3] act on verdict
                     ├─ block        → _block_ip(), 403
@@ -220,6 +220,15 @@ Admin endpoint. Immediately removes an IP block.
 
 ---
 
+#### `POST /idms/clear_log`
+Admin endpoint. Wipes the entire detection log, in-memory metrics ring, all IP blocks, all counters, and all rule engine / anomaly engine per-IP state. Returns the system to a clean slate for demo resets.
+
+**Response:** `{"cleared": true}`
+
+> Note: this is a destructive operation. It calls `rule_reset_all()` and `anomaly_reset_all()` internally, so rate-window history and anomaly baselines are erased — anomaly engine will need ~15s to rebuild the baseline.
+
+---
+
 #### `GET /idms/attack_log?limit=200`
 Detection timeline from SQLite (newest first).
 
@@ -248,8 +257,8 @@ Returns `RULE_CONFIG`, `ANOMALY_CONFIG`, and `MITIGATION_CONFIG`:
 ```json
 {
   "rules":      { "rate_limit_window_seconds": 10, "rate_limit_max_requests": 200, "..." : "..." },
-  "anomaly":    { "window_seconds": 30, "min_baseline_samples": 50, "zscore_threshold": 5.0, "..." : "..." },
-  "mitigation": { "block_duration_medium": 60, "escalation_strikes": 20, "..." : "..." }
+  "anomaly":    { "window_seconds": 30, "min_baseline_samples": 150, "zscore_threshold": 1.5, "..." : "..." },
+  "mitigation": { "block_duration_medium": 60, "escalation_strikes": 8, "escalation_block_duration": 30, "..." : "..." }
 }
 ```
 
@@ -275,9 +284,11 @@ Route a task to a backend server.
 **Headers:** `X-API-Key` is forwarded from IDMS but not re-validated here. Auth is enforced solely at the IDMS boundary.
 
 **Algorithms:**
-- `round_robin` — cycles healthy servers in order
-- `source_hashing` — MD5 of task type + parameters + 30s time bucket → deterministic server selection
-- `least_loaded` — queries `/load` on all healthy servers, picks lowest + `uniform(0, 0.5)` jitter
+- `round_robin` — cycles healthy servers in order using a thread-safe iterator (`_rr_lock` prevents race condition on `next(server_pool)` under concurrent load)
+- `source_hashing` — MD5 of task type + parameters + 30s time bucket → deterministic server selection. Hash uses first 8 hex chars of `hexdigest()` (not all 32) for efficiency. Falls back to ring-order on server failure.
+- `least_loaded` — polls `/load` on all healthy servers, picks lowest + `uniform(0, 0.5)` jitter for tie-breaking. Load data reflects server's own counter, not a duplicate LB-side estimate.
+
+**Health checking:** A background thread polls every 5 seconds and caches server health state. All algorithms read from the cache — no per-request HTTP calls to check health. Failures use exponential backoff before retrying.
 
 **Response:** proxied from backend, adds server identification.
 
@@ -321,7 +332,7 @@ Returns healthy server count and current algorithm.
 ```
 
 **Load model:**
-- `request_count` increments on arrival, decrements on completion (thread-safe).
+- `request_count` increments on arrival, decrements on completion (thread-safe counter with `try/finally` guarantee — counter always decrements even if a request crashes mid-processing).
 - Processing delay: `0.1 × 1.5^(load−1)` seconds (exponential backoff under load).
 - Returns `503` when `current_load > OVERLOAD_THRESHOLD` (8).
 
@@ -338,10 +349,11 @@ Returns `{"server", "load", "total_requests"}`.
 #### `POST /request`
 Accepts any forwarded request, logs it to SQLite, returns a convincing fake success.
 
-**Response (always 200):**
+**Response (always 200) — randomised to prevent fingerprinting:**
 ```json
-{ "status": "ok", "server": "server1", "result": null, "processing_time": 0.001, "load": 0 }
+{ "status": "ok", "server": "Server-3", "result": null, "processing_time": 0.147, "load": 2 }
 ```
+`server` is chosen randomly from Server-1–4; `processing_time` is `uniform(0.05, 0.25)`; `load` is `randint(0, 3)`.
 
 #### `GET /captures?limit=100`
 Recent captures (id, ts, source_ip, path, payload_size, idms_tag).
@@ -364,7 +376,7 @@ Recent captures (id, ts, source_ip, path, payload_size, idms_tag).
 | 6 | `endpoint_scan` | `rule_engine.py` | high | deprioritise | >5 distinct paths in 10s per IP |
 | 7 | `oversized_payload` | `rule_engine.py` | medium | block | Raw body > 8 192 bytes |
 | 8 | `oversized_list` | `rule_engine.py` | medium | block | `sort_large_list.numbers` > 500 items |
-| 9 | `anomaly` | `anomaly_engine.py` | medium/high | deprioritise → escalate to block | IAT Z-score exceeds 5.0 (after 50-request warm-up). 20 deprioritise strikes in 120s auto-escalates to a 120s block. |
+| 9 | `anomaly` | `anomaly_engine.py` | medium/high | deprioritise → escalate to block | IAT Z-score exceeds 1.5 (after 150-request warm-up). 8 deprioritise strikes within 120s auto-escalates to a 30s block. |
 
 > Auth runs first (rules 1–3). Unauthenticated requests are rejected immediately without body inspection — they are always classified by their auth failure, never by attack content. This keeps Phase 6 event classification clean.
 >
@@ -383,7 +395,13 @@ Patterns are checked against **all string values AND all keys** via recursive `_
 
 ### Sliding-window state
 
-Both `_rate_windows` and `_endpoint_windows` are per-IP `deque` structures in memory. State is cleared by `reset_state_for_ip()` on unblock — `_unblock_ip()` in `MitigationController` calls both `rule_reset(ip)` and `anomaly_reset(ip)` and also clears the escalation strike window (`_strike_windows.pop(ip)`), so the SQLite block record, in-memory rate counters, anomaly baseline, and strike history are all reset atomically.
+Both `_rate_windows` and `_endpoint_windows` are per-IP `deque` structures in memory.
+
+**Per-IP reset (on unblock):** `_unblock_ip()` in `MitigationController` calls `rule_reset(ip)`, `anomaly_reset(ip)`, and clears `_strike_windows[ip]` — SQLite block record, rate counters, anomaly baseline, and strike history are all cleared atomically.
+
+**Global reset (demo / clear log):** `clear_log()` calls `rule_reset_all()` and `anomaly_reset_all()` which call `_rate_windows.clear()` and `_ip_states.clear()` respectively, plus wipes SQLite `detection_log` and `ip_reputation`, and clears the in-memory metrics ring and counters.
+
+**Anomaly state TTL pruning:** A background thread runs every 60 seconds and removes per-IP anomaly state where the last sample timestamp is older than `window_seconds` (30s). Prevents unbounded memory growth from IPs that send a few requests and disappear.
 
 ### Phase 2 — Anomaly Engine (`anomaly_engine.py`) ✅
 
@@ -396,13 +414,13 @@ Both `_rate_windows` and `_endpoint_windows` are per-IP `deque` structures in me
 
 **Algorithm:** Modified Z-score (`0.6745 × |x − median| / MAD`) — more robust than mean/stddev for the small, skewed samples typical of short traffic windows (Iglewicz & Hoaglin, 1993).
 
-**Warm-up:** First 10 requests per IP always pass. No baseline exists until there is enough history to score against.
+**Warm-up:** First 150 requests per IP always pass (configurable via `min_baseline_samples`). At ~10 req/s auto-baseline rate, warm-up completes in ~15 seconds. No scoring occurs until the baseline is established.
 
 **Score escalation:**
-- Combined score > 5.0 → `severity="medium"`, `recommended="deprioritise"`
-- Combined score > 7.5 (5.0 × 1.5) → `severity="high"`, `recommended="deprioritise"`
+- Combined score > 1.5 → `severity="medium"`, `recommended="deprioritise"`
+- Combined score > 2.25 (1.5 × 1.5) → `severity="high"`, `recommended="deprioritise"`
 
-**Warm-up calibration:** `min_baseline_samples` is set to 50 (not the statistical minimum of 10) so the baseline is established from steady-state burst traffic rather than the slow startup requests that precede the main workload. This prevents false positives on the startup-to-burst transition while preserving sensitivity to mid-session behavioural changes.
+**Warm-up calibration:** `min_baseline_samples` is 150 (not the statistical minimum) so the baseline is stable and represents steady-state traffic before scoring begins. The auto-baseline thread sends ~10 req/s (100ms interval) — well under the 200/10s rate limit — leaving headroom so a burst of 50 extra requests reaches the anomaly engine rather than tripping the rate limiter first.
 
 **`inspection_ms`:** timed with `time.perf_counter()` inside `score()` and set on every returned `DetectionResult`. Observed range on legitimate traffic: 0.17ms–1.9ms.
 
@@ -506,9 +524,9 @@ Both `_rate_windows` and `_endpoint_windows` are per-IP `deque` structures in me
 | Key | Default | Tunable at runtime | Notes |
 |---|---|---|---|
 | `window_seconds` | 30 | ✅ via `POST /idms/config` | Sliding window for baseline |
-| `min_baseline_samples` | 50 | ✅ | Warm-up requests before scoring starts; 50 ensures baseline reflects steady-state burst traffic, not slow startup requests |
-| `zscore_threshold` | 5.0 | ✅ | IAT Z-score cutoff (effective, since payload weight=0). At baseline IAT 50ms with MAD 2ms, fires when current IAT < ~36ms. |
-| `zscore_high_multiplier` | 1.5 | ✅ | Multiplied with threshold to escalate to "high" severity (effective cutoff: 7.5) |
+| `min_baseline_samples` | 150 | ✅ | Warm-up requests before scoring starts. At ~10 req/s baseline this is ~15s — enough to establish a stable median/MAD before burst arrives. |
+| `zscore_threshold` | 1.5 | ✅ | IAT Z-score cutoff (effective, since payload weight=0). Lowered from 5.0 to improve burst sensitivity while remaining above the noise floor of jittered steady traffic. |
+| `zscore_high_multiplier` | 1.5 | ✅ | Multiplied with threshold to escalate to "high" severity (effective cutoff: 2.25) |
 | `payload_zscore_weight` | 0.0 | ✅ | Disabled — multimodal task payloads cause false positives. Value still computed and logged. |
 | `iat_zscore_weight` | 1.0 | ✅ | IAT-only detection: burst attacks always accelerate request rate |
 
@@ -519,9 +537,9 @@ Both `_rate_windows` and `_endpoint_windows` are per-IP `deque` structures in me
 | `block_duration_medium` | 60s | ✅ via `POST /idms/config` | Block duration for medium-severity rules |
 | `block_duration_high` | 300s | ✅ | Block duration for high-severity rules (e.g. rate_limit, endpoint_scan) |
 | `block_duration_critical` | 900s | ✅ | Block duration for critical-severity rules (e.g. sqli — though sqli goes to honeypot) |
-| `escalation_strikes` | 20 | ✅ | Deprioritise events within the window before auto-block |
+| `escalation_strikes` | 8 | ✅ | Deprioritise events within the window before auto-block |
 | `escalation_window_seconds` | 120s | ✅ | Sliding window for counting deprioritise strikes |
-| `escalation_block_duration` | 120s | ✅ | Duration of escalation-triggered block |
+| `escalation_block_duration` | 30s | ✅ | Duration of escalation-triggered block |
 
 ### Server load thresholds (`server.py`)
 
@@ -561,7 +579,11 @@ docker compose down -v
 
 `database` → `server1-4` → `loadbalancer` → `honeypot` → `idms` → `dashboard` + `client`
 
-> `depends_on` ensures container start order, not Flask readiness. `client.py` handles this with `_wait_for_idms()`, which polls `GET /health` every 2 seconds (up to 60s timeout) before sending any requests. The client restart policy is `"no"` — it is a one-shot test runner, not a persistent service.
+All `depends_on` entries use `condition: service_healthy` so Docker waits for each service's `healthcheck` to pass before starting dependents — preventing race conditions at startup. Health checks use `python -c "import urllib.request; urllib.request.urlopen(...)"` (no extra tools required in the minimal Python images).
+
+MongoDB data is persisted in a named volume `mongo_data` mounted at `/data/db`, so database records survive `docker-compose down` (but are wiped by `docker-compose down -v`).
+
+> `client.py` additionally polls `GET /health` every 2 seconds (up to 60s) before sending any requests. The client restart policy is `"no"` — it is a one-shot test runner, not a persistent service.
 
 ### Accessing dashboards and logs
 
@@ -598,6 +620,7 @@ docker logs -f idms
 |---|---|---|
 | `idms_data` | `/data` (idms container) | `idms.db` — IP reputation + detection log |
 | `honeypot_data` | `/data` (honeypot container) | `honeypot.db` — captured payloads |
+| `mongo_data` | `/data/db` (database container) | MongoDB collections — request log + user data |
 
 ---
 
@@ -676,13 +699,13 @@ See [§10.3](#103-testing-phase-2-anomaly-engine) for standalone and integration
 
 | Recommended | Action |
 |---|---|
-| `block` | `_block_ip()` with severity-based duration (medium=60s, high=300s, critical=900s) + 403 |
+| `block` | `_block_ip()` with severity-based duration (medium=60s, high=300s, critical=900s) + 403. Escalation-triggered blocks use 30s. |
 | `honeypot` | Forward to `honeypot:5002` with `X-IDMS-Tag: honeypot` |
 | `deprioritise` | Record strike → if threshold crossed, escalate to block; otherwise forward with `X-IDMS-Tag: deprioritised` |
 | `allow` | Forward to load balancer unchanged |
 
 **Escalation logic:**
-Per-IP sliding-window strike counter (`_strike_windows`). 20 deprioritise events within 120 seconds triggers a 120-second block. This catches slow-rate attackers that stay under the hard rate limit but generate repeated anomaly flags. On unblock, `_unblock_ip()` clears SQLite record, rule engine counters, anomaly baseline, and strike window atomically.
+Per-IP sliding-window strike counter (`_strike_windows`). 8 deprioritise events within 120 seconds triggers a 30-second block. This catches slow-rate attackers that stay under the hard rate limit but generate repeated anomaly flags. On unblock, `_unblock_ip()` clears SQLite record, rule engine counters, anomaly baseline, and strike window atomically.
 
 **Verified results (full legitimate client run):**
 - `allow` = 450, `block` = 2 (auth tests only), `deprioritise` ≤ 1
@@ -690,52 +713,117 @@ Per-IP sliding-window strike counter (`_strike_windows`). 20 deprioritise events
 
 ---
 
-### ⬜ Phase 4 — Attack Simulation Client
+### ✅ Phase 4 — Attack Simulation Client
 
-**File to create:** `Client/attack_client.py`
+**File:** `Client/attack_client.py`
 
-Attack modes:
-| Mode | Description | Config params |
+Standalone attack simulator targeting the IDMS. Each mode is designed to stress a specific detection layer and produce measurable outcomes for Phase 6 evaluation. All modes spoof `X-Forwarded-For` using IPs in the `192.168.100.x` range — distinct from dashboard demo IPs (`10.10.0.1–4`) — so attack traffic never blocks the legitimate client or the auto-baseline thread.
+
+**Attack modes:**
+
+| Mode | Targets | What it does |
 |---|---|---|
-| `flood` | High-rate burst (>30 req/10s) | `--rate`, `--duration` |
-| `slow_rate` | Low-rate evasion (just under threshold) | `--rate` |
-| `sqli` | Payloads with SQL/NoSQL injection strings | `--intensity` |
-| `mixed` | Interleaved legitimate + malicious | `--malicious_ratio` |
+| `flood` | Rule engine — rate_limit | Sends >200 req/10s from one IP; first ~200 allowed, rest blocked for 300s |
+| `sqli` | Rule engine — sqli rule | 20 SQL/NoSQL injection payloads (valid API key); all redirected to honeypot |
+| `slow_rate` | Anomaly engine | Phase A: 10 req/s warmup (builds 150-sample baseline). Phase B: 8 concurrent micro-bursts at 0.8s intervals — IAT drops from ~100ms to ~1ms, Z-score > 1.5 → deprioritise → escalation block after 8 strikes |
+| `mixed` | Both layers | Two concurrent streams: attacker at 40 req/s (triggers rate_limit) + legitimate user at 8 req/s (stays clean). Measures collateral impact. |
+| `stress` | Rate limit ramp | Steps from `--start-rate` to `--max-rate` in increments; each step uses a fresh IP. Finds detection onset and breaking point. |
+| `all` | All layers | Runs flood → sqli → slow_rate → mixed in sequence; prints cross-mode comparison table |
 
-Output: timestamped CSV of requests sent, responses received, status codes.
+**Key implementation details:**
+
+- `ResultStore`: thread-safe per-request row collector (`_lock`-protected list + `defaultdict` counters). Used by all concurrent request threads.
+- `_infer_outcome()`: distinguishes `allowed`, `blocked`, `honeypot` (status=ok AND result=null), `overloaded` (503), `upstream_error`, `upstream_timeout` from HTTP response alone — no IDMS-side query needed per request.
+- `_detection_rates()`: computes two separate figures — **client-visible rate** (blocked 403 + honeypot / total) and **IDMS true rate** (detection_log events / total). For `flood`: once the IP is blocked, all subsequent 403s are short-circuit `_is_blocked()` rejections — they never reach detection engines and are not written to `detection_log`. The client-visible rate is therefore the accurate metric for flood; IDMS log events reflect only the single rate_limit trigger.
+- `slow_rate` Phase B uses micro-bursts instead of a raised rate: Docker Desktop on Windows adds 20–80ms jitter to every IAT, widening baseline MAD to ~40ms. At 18 req/s the IAT is 56ms — a Z-score of only ~0.6 against a jittered baseline. Concurrent requests have IAT ~1ms regardless of network jitter, giving Z ≈ 1.65, which reliably crosses threshold=1.5.
+- `mixed` uses separate `--atk-rate` (default 40) and `--legit-rate` (default 8) rather than a single combined rate. A single 15 req/s combined rate overloaded backend servers (503) before the IDMS could demonstrate rate-limit blocking — because both streams hit the same 4 servers simultaneously. At 8 legit req/s ÷ 4 servers = 2 req/server, well under `OVERLOAD_THRESHOLD=8`.
+- `stress` uses `--step-duration=12s` (default) rather than the 10s rate-limit window. At exactly 10s, a 20 req/s step sends exactly 200 requests — at the limit but not over it. At 12s: 20 × 12 = 240 → detection fires correctly.
+
+**CLI parameters:**
+
+```
+python attack_client.py --mode flood [--rate 50] [--duration 15]
+python attack_client.py --mode sqli [--count 20]
+python attack_client.py --mode slow_rate [--warmup-duration 20] [--duration 30]
+python attack_client.py --mode mixed [--atk-rate 40] [--legit-rate 8] [--duration 20]
+python attack_client.py --mode stress [--start-rate 5] [--max-rate 60] [--step 5] [--step-duration 12]
+python attack_client.py --mode all [--output results/run1.csv]
+```
+
+`--legit-rate` is hard-capped at 15 — values above that risk overloading backend servers independently of the attack stream.
+
+**Output — CSV (`results/attack_<mode>_<timestamp>.csv`):**
+
+| Column | Content |
+|---|---|
+| `timestamp_unix` | Request send time |
+| `mode` | Attack mode name |
+| `phase` | `warmup` / `attack` / `legitimate` / `stress_<N>` |
+| `ip` | Spoofed source IP |
+| `request_id` | Per-mode sequence number |
+| `task_type` | Task sent |
+| `payload_bytes` | Raw JSON body size |
+| `status_code` | HTTP response code |
+| `response_ms` | Round-trip latency |
+| `outcome` | `allowed` / `blocked` / `honeypot` / `overloaded` / `upstream_error` / `timeout` |
+| `error` | Network error string if applicable |
+
+**Detection ceiling (stress mode):** At any rate R, the first 200 requests in the 10s window always pass before the rate-limit block fires. Theoretical maximum client-visible detection rate = `(total − 200) / total`. At 60 req/s × 12s = 720 requests: `(720 − 200) / 720 = 72.2%`. The stress table footer reports this ceiling alongside the measured result.
 
 ---
 
-### ✅ Phase 5 — Dashboard
+### ✅ Phase 5 — Multi-page Dashboard
 
-**Files:** `dashboard/server.py`, `dashboard/templates/index.html`
+**Files:** `dashboard/server.py`, `dashboard/templates/base.html`, `dashboard/templates/index.html`, `dashboard/templates/loadbalancer.html`, `dashboard/templates/rules.html`, `dashboard/templates/anomaly.html`, `dashboard/templates/mitigation.html`
 
-Flask backend running on port 8080. Queries IDMS and backend servers from within the Docker network; exposes a clean `/api/*` surface to the browser to avoid CORS issues and keep IDMS internals private.
+Flask backend running on port 8080. Five-page UI using Jinja2 template inheritance (`base.html` provides nav bar + shared CSS). A background auto-baseline thread starts on dashboard boot, polls `GET /health` until IDMS is ready, then sends steady ~10 req/s traffic from the anomaly demo IP — the anomaly engine is warm-up-ready before the professor arrives.
 
-**Panels:**
+**Pages:**
+
+| # | Route | Title | Contents |
+|---|---|---|---|
+| 1 | `/loadbalancer` | Load Balancer | Animated request simulation (client→LB→4 servers), algorithm cards with improvement details, before/after optimisation table |
+| 2 | `/rules` | Rule Engine | Architecture diagram with Rule Engine highlighted, 6 rule cards colour-coded by severity, request trace visualisation, live test buttons |
+| 3 | `/anomaly` | Anomaly Engine | Architecture diagram with Phase 2 highlighted, Z-score formula, IAT distribution bar chart, baseline status indicator, burst demo button |
+| 4 | `/mitigation` | Mitigation Controller | Decision tree, escalation strike simulator (fills to 8 strikes), persistence grid, block duration table |
+| 5 | `/` | Live Demo | Real-time counters, request-rate chart, server distribution chart, detection/allowed tables, all demo buttons |
+
+**Live Demo panels (Page 5):**
 
 | Panel | Data source | Refresh |
 |---|---|---|
 | Status bar (IDMS / LB / server count) | `GET /api/overview` | 2s |
-| Algorithm selector | `POST /api/algorithm` → IDMS `/set_algorithm` | on change |
+| Algorithm selector | `POST /api/algorithm` | on change |
 | Traffic counters (allow / block / honeypot / deprioritise) with % | `GET /api/overview` | 2s |
 | Requests/sec line chart (60s rolling, zero-filled) | `GET /api/overview` | 2s |
-| Server total requests bar chart (server1–4) | `GET /api/overview` → `server_N:5000/load` | 2s |
-| Recent events table (last 20, outcome-tagged) | `GET /api/events` | 2s |
+| Server total requests bar chart | `GET /api/overview` | 2s |
+| Recent detections table (last 20, outcome-tagged) | `GET /api/detections` | 2s |
+| Allowed events table | `GET /api/events` | 2s |
 | Blocked IPs table with countdown + unblock button | `GET /api/blocked` | 5s |
-| Inspection latency line chart (last 100 events) | `GET /api/overview` | 2s |
-| Active IP rate badges (highlight near threshold) | `GET /api/overview` | 2s |
+| Inspection latency line chart | `GET /api/overview` | 2s |
 
 **Dashboard API (`dashboard:8080`)**
 
-| Endpoint | Method | Proxies to |
-|---|---|---|
-| `/api/overview` | GET | IDMS `/health`, `/idms/metrics`, each server `/load` |
-| `/api/events?n=N` | GET | IDMS `/idms/metrics` |
-| `/api/blocked` | GET | IDMS `/idms/blocked` |
-| `/api/algorithm` | POST | IDMS `/set_algorithm` |
-| `/api/unblock/<ip>` | POST | IDMS `/idms/unblock/<ip>` |
-| `/api/config` | GET / POST | IDMS `/idms/config` |
+| Endpoint | Method | Proxies to | Notes |
+|---|---|---|---|
+| `/api/overview` | GET | IDMS `/health`, `/idms/metrics`, each server `/load` | Combined status + chart data |
+| `/api/events?n=N` | GET | IDMS `/idms/metrics` | Last N events (reversed, newest first) |
+| `/api/detections?limit=N` | GET | IDMS `/idms/attack_log` | SQLite-persisted detections (survives ring overflow) |
+| `/api/blocked` | GET | IDMS `/idms/blocked` | Active IP blocks |
+| `/api/algorithm` | POST | IDMS `/set_algorithm` | Switch LB algorithm at runtime |
+| `/api/unblock/<ip>` | POST | IDMS `/idms/unblock/<ip>` | Manual unblock |
+| `/api/config` | GET / POST | IDMS `/idms/config` | Read/update thresholds at runtime |
+| `/api/demo` | POST | IDMS `/request` (direct) | Trigger demo scenarios: `wrong_key`, `sqli`, `flood`, `burst`, `reset` |
+
+**Demo scenarios (`POST /api/demo`, body `{"type": "<scenario>"}`)**:
+
+| `type` | What it does |
+|---|---|
+| `wrong_key` | Sends one request with `X-API-Key: wrong-key-abc` from `10.10.0.1` |
+| `sqli` | Sends `{"num1": "1 OR 1=1 --"}` from `10.10.0.2` |
+| `flood` | Spawns 250 concurrent threads staggered 10ms apart from `10.10.0.3` |
+| `burst` | Fires 50 fully concurrent requests from `10.10.0.4` (same IP as auto-baseline) |
+| `reset` | Calls `/idms/clear_log`, then unblocks all 4 demo IPs |
 
 Access at `http://localhost:8080`.
 
@@ -915,7 +1003,7 @@ Invoke-RestMethod -Method POST -Uri "http://localhost:5001/idms/config" `
 # Reset to calibrated default
 Invoke-RestMethod -Method POST -Uri "http://localhost:5001/idms/config" `
     -ContentType "application/json" `
-    -Body '{"zscore_threshold": 5.0}'
+    -Body '{"zscore_threshold": 1.5}'
 ```
 
 ---
@@ -924,8 +1012,8 @@ Invoke-RestMethod -Method POST -Uri "http://localhost:5001/idms/config" `
 
 | Check | Expected |
 |---|---|
-| Requests 1–50 from a new IP | `flagged=False` in metrics, `warmed_up=false` in anomaly snapshot |
-| Request 51+ with normal payload and timing | `flagged=False`, `warmed_up=true` |
+| Requests 1–150 from a new IP | `flagged=False` in metrics, `warmed_up=false` in anomaly snapshot |
+| Request 151+ with normal payload and timing | `flagged=False`, `warmed_up=true` |
 | Request with 10× payload spike (after warm-up) | `flagged=False` — payload scoring disabled; rule engine 8 KB cap handles the extreme case |
 | Burst after slow baseline (after warm-up) | `rule_name=anomaly` after 2–3 burst requests |
 | `inspect_ms` on anomaly events | 0.1ms–2ms range (non-zero; was 0.0 before fix) |

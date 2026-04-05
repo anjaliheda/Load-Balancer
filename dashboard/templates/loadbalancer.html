@@ -1,0 +1,440 @@
+{% extends "base.html" %}
+{% block title %}Load Balancer — IDMS Dashboard{% endblock %}
+
+{% block extra_css %}
+/* ── Architecture diagram ── */
+.arch-diagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 30px 0;
+  position: relative;
+}
+.arch-node {
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+.arch-node .icon-box {
+  width: 64px; height: 64px;
+  border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  margin: 0 auto 8px;
+  font-size: 28px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border: 2px solid var(--border);
+  background: var(--card);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+.arch-node .icon-box.active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 4px rgba(37,99,235,0.12);
+}
+.arch-node .node-label {
+  font-size: 12px; font-weight: 600; color: var(--text);
+}
+.arch-node .node-sub {
+  font-size: 11px; color: var(--muted);
+}
+
+/* ── Arrow connector ── */
+.arch-arrow {
+  display: flex; align-items: center; position: relative; z-index: 1;
+  margin: 0 -4px;
+}
+.arch-arrow .arrow-line {
+  width: 60px; height: 2px;
+  background: var(--border);
+  position: relative;
+}
+.arch-arrow .arrow-line::after {
+  content: '';
+  position: absolute; right: -6px; top: -4px;
+  border: 5px solid transparent;
+  border-left: 6px solid var(--border);
+}
+.arch-arrow .arrow-line.active { background: var(--accent); }
+.arch-arrow .arrow-line.active::after { border-left-color: var(--accent); }
+
+/* ── Fan-out to servers ── */
+.server-fan {
+  display: flex; flex-direction: column; gap: 10px; align-items: flex-start;
+}
+.server-fan .server-row {
+  display: flex; align-items: center; gap: 10px;
+}
+.server-fan .s-box {
+  width: 48px; height: 48px;
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 20px;
+  background: var(--card);
+  border: 2px solid var(--border);
+  transition: all 0.4s;
+  position: relative;
+}
+.server-fan .s-box.hit {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.15);
+  transform: scale(1.08);
+}
+.server-fan .s-label {
+  font-size: 12px; font-weight: 500; color: var(--muted);
+  min-width: 56px;
+}
+.server-fan .s-count {
+  font-size: 12px; font-weight: 700; color: var(--accent);
+  min-width: 30px;
+}
+
+/* ── Request packet animation ── */
+.packet {
+  position: absolute;
+  width: 10px; height: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0;
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* ── Algorithm cards ── */
+.algo-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+.algo-card {
+  background: var(--card);
+  border: 2px solid var(--border);
+  border-radius: 10px;
+  padding: 20px 22px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.algo-card:hover { border-color: #bfdbfe; }
+.algo-card.selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+}
+.algo-card .ac-name {
+  font-size: 15px; font-weight: 700; color: var(--text);
+  margin-bottom: 6px;
+}
+.algo-card .ac-how {
+  font-size: 13px; color: var(--muted); line-height: 1.6;
+  margin-bottom: 12px;
+}
+.algo-card .ac-improvements {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.algo-card .ac-improvements .imp-title {
+  font-size: 11px; font-weight: 600; text-transform: uppercase;
+  letter-spacing: 0.5px; color: var(--allow); margin-bottom: 6px;
+}
+.algo-card .ac-improvements li {
+  font-size: 12px; color: var(--text); line-height: 1.6;
+  margin-left: 16px; margin-bottom: 2px;
+}
+
+/* ── Live stats bar ── */
+.live-stats {
+  display: flex; gap: 24px; align-items: center; flex-wrap: wrap;
+}
+.live-stat {
+  display: flex; align-items: baseline; gap: 6px;
+}
+.live-stat .ls-label { font-size: 12px; color: var(--muted); }
+.live-stat .ls-value { font-size: 20px; font-weight: 700; color: var(--text); }
+.live-stat .ls-unit  { font-size: 12px; color: var(--light); }
+
+/* ── Simulation controls ── */
+.sim-controls {
+  display: flex; gap: 12px; align-items: center; flex-wrap: wrap;
+}
+.sim-speed {
+  font-size: 12px; color: var(--muted);
+}
+{% endblock %}
+
+{% block body %}
+<div class="page">
+
+  <div class="page-header">
+    <h2>Load Balancer</h2>
+    <p>Distributes client requests across 4 backend servers using configurable algorithms</p>
+  </div>
+
+  <!-- Architecture diagram -->
+  <div class="card">
+    <div class="card-title">Architecture</div>
+    <div class="arch-diagram" id="arch-diagram">
+      <!-- Client -->
+      <div class="arch-node">
+        <div class="icon-box" id="node-client">&#x1F4BB;</div>
+        <div class="node-label">Client</div>
+        <div class="node-sub">sends requests</div>
+      </div>
+
+      <div class="arch-arrow"><div class="arrow-line" id="arrow-1"></div></div>
+
+      <!-- Load Balancer -->
+      <div class="arch-node">
+        <div class="icon-box active" id="node-lb">&#x2696;</div>
+        <div class="node-label">Load Balancer</div>
+        <div class="node-sub" id="lb-algo-label">Round Robin</div>
+      </div>
+
+      <div class="arch-arrow"><div class="arrow-line" id="arrow-2"></div></div>
+
+      <!-- Servers -->
+      <div class="server-fan" id="server-fan">
+        <div class="server-row">
+          <div class="s-box" id="srv-0">&#x1F5A5;</div>
+          <span class="s-label">Server 1</span>
+          <span class="s-count" id="srv-cnt-0">0</span>
+        </div>
+        <div class="server-row">
+          <div class="s-box" id="srv-1">&#x1F5A5;</div>
+          <span class="s-label">Server 2</span>
+          <span class="s-count" id="srv-cnt-1">0</span>
+        </div>
+        <div class="server-row">
+          <div class="s-box" id="srv-2">&#x1F5A5;</div>
+          <span class="s-label">Server 3</span>
+          <span class="s-count" id="srv-cnt-2">0</span>
+        </div>
+        <div class="server-row">
+          <div class="s-box" id="srv-3">&#x1F5A5;</div>
+          <span class="s-label">Server 4</span>
+          <span class="s-count" id="srv-cnt-3">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Simulation controls -->
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:8px; flex-wrap:wrap; gap:12px;">
+      <div class="sim-controls">
+        <button class="btn btn-accent" id="btn-sim" onclick="toggleSim()">Start Simulation</button>
+        <button class="btn btn-gray" onclick="resetSim()">Reset Counters</button>
+        <span class="sim-speed" id="sim-speed-label">Speed: 1 req / 500ms</span>
+      </div>
+      <div class="live-stats">
+        <div class="live-stat">
+          <span class="ls-label">Total</span>
+          <span class="ls-value" id="stat-total">0</span>
+          <span class="ls-unit">requests</span>
+        </div>
+        <div class="live-stat">
+          <span class="ls-label">Algorithm</span>
+          <span class="ls-value" id="stat-algo" style="font-size:14px; color:var(--accent)">Round Robin</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Algorithm selection -->
+  <div class="card">
+    <div class="card-title">Algorithms — click to switch</div>
+    <div class="algo-cards">
+
+      <div class="algo-card selected" id="card-rr" onclick="selectAlgo('round_robin')">
+        <div class="ac-name">Round Robin</div>
+        <div class="ac-how">
+          Cycles through servers in fixed order: 1 &rarr; 2 &rarr; 3 &rarr; 4 &rarr; 1 &hellip;<br>
+          Simple, predictable, and ensures even distribution when all servers are equal.
+        </div>
+        <div class="ac-improvements">
+          <div class="imp-title">Our improvements</div>
+          <ul>
+            <li><b>Background health checks</b> &mdash; unhealthy servers are skipped automatically (5s polling interval instead of per-request HTTP calls)</li>
+            <li><b>Thread-safe iterator</b> &mdash; concurrent requests can't skip or double-assign servers</li>
+            <li><b>Exponential backoff</b> &mdash; failed servers get increasing cooldown before re-check</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="algo-card" id="card-sh" onclick="selectAlgo('source_hashing')">
+        <div class="ac-name">Source Hashing</div>
+        <div class="ac-how">
+          Hashes the request content (task type + parameters) to pick a server.<br>
+          Identical requests always go to the same server &mdash; great for caching.
+        </div>
+        <div class="ac-improvements">
+          <div class="imp-title">Our improvements</div>
+          <ul>
+            <li><b>Content-aware hashing</b> &mdash; hash key includes task type, parameters, and time bucket for balanced distribution</li>
+            <li><b>Fallback on failure</b> &mdash; if the hashed server is down, tries the next server in ring order</li>
+            <li><b>Optimized hash</b> &mdash; uses first 8 hex chars of MD5 instead of full 32 for faster computation</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="algo-card" id="card-ll" onclick="selectAlgo('least_loaded')">
+        <div class="ac-name">Least Loaded</div>
+        <div class="ac-how">
+          Queries each server's current load and picks the one with the fewest active requests.<br>
+          Best under uneven workloads where tasks have different processing times.
+        </div>
+        <div class="ac-improvements">
+          <div class="imp-title">Our improvements</div>
+          <ul>
+            <li><b>Real-time load queries</b> &mdash; polls each server's /load endpoint for live metrics</li>
+            <li><b>Jitter tie-breaking</b> &mdash; adds small random noise to prevent all requests hitting the same "lightest" server simultaneously</li>
+            <li><b>Guaranteed load decrement</b> &mdash; servers use try/finally so the counter always decrements, even on crashes</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- How it works -->
+  <div class="card">
+    <div class="card-title">How the Load Balancer fits in</div>
+    <div class="highlight-box">
+      The load balancer sits between the IDMS proxy and the 4 backend servers.
+      Every request that passes IDMS inspection is forwarded here.
+      The LB picks a healthy server using the selected algorithm and proxies the request.
+      If a server is down or overloaded, it is automatically skipped &mdash; the client never sees a failure unless all 4 servers are unavailable.
+    </div>
+    <div style="margin-top:16px;">
+      <table>
+        <thead>
+          <tr><th>Feature</th><th>Before</th><th>After optimisation</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="font-weight:600">Health checking</td>
+            <td style="color:var(--block)">HTTP call to every server on every request (2s timeout each)</td>
+            <td style="color:var(--allow)">Background thread checks every 5s; request path uses cached result</td>
+          </tr>
+          <tr>
+            <td style="font-weight:600">Thread safety</td>
+            <td style="color:var(--block)">Shared iterator and dict with no locks</td>
+            <td style="color:var(--allow)">Dedicated locks for round-robin iterator and server state dict</td>
+          </tr>
+          <tr>
+            <td style="font-weight:600">Load tracking</td>
+            <td style="color:var(--block)">Double-incremented (LB + server both bump counter)</td>
+            <td style="color:var(--allow)">Server-side only with try/finally for guaranteed decrement</td>
+          </tr>
+          <tr>
+            <td style="font-weight:600">Error handling</td>
+            <td style="color:var(--block)">Generic 500 for all failures</td>
+            <td style="color:var(--allow)">Distinguishes timeout (504), unreachable (502), and other errors (500)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // ── Simulation state ──────────────────────────────────────────────────────
+  let simRunning = false;
+  let simTimer   = null;
+  let simAlgo    = 'round_robin';
+  let rrIndex    = 0;
+  const counts   = [0, 0, 0, 0];
+  const healthy  = [true, true, true, true];   // all healthy for sim
+
+  function selectAlgo(algo) {
+    simAlgo = algo;
+    document.querySelectorAll('.algo-card').forEach(c => c.classList.remove('selected'));
+    const map = { round_robin: 'card-rr', source_hashing: 'card-sh', least_loaded: 'card-ll' };
+    document.getElementById(map[algo]).classList.add('selected');
+
+    const labels = { round_robin: 'Round Robin', source_hashing: 'Source Hashing', least_loaded: 'Least Loaded' };
+    document.getElementById('lb-algo-label').textContent = labels[algo];
+    document.getElementById('stat-algo').textContent = labels[algo];
+
+    // Also tell the real LB
+    fetch('/api/algorithm', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ algorithm: algo }),
+    }).catch(() => {});
+  }
+
+  function pickServer() {
+    if (simAlgo === 'round_robin') {
+      // Cycle through 0,1,2,3,0,1,...
+      const s = rrIndex % 4;
+      rrIndex++;
+      return s;
+    }
+    if (simAlgo === 'source_hashing') {
+      // Simulate: hash a random request → deterministic but varied
+      // Use a simple pseudo-hash for visual variety
+      const tasks = ['addition', 'multiplication', 'factorial', 'string_length'];
+      const task = tasks[Math.floor(Math.random() * tasks.length)];
+      let h = 0;
+      for (let i = 0; i < task.length; i++) h = ((h << 5) - h + task.charCodeAt(i)) | 0;
+      return Math.abs(h) % 4;
+    }
+    if (simAlgo === 'least_loaded') {
+      // Pick the server with the fewest requests, random tiebreak
+      let min = Infinity, candidates = [];
+      for (let i = 0; i < 4; i++) {
+        if (counts[i] < min) { min = counts[i]; candidates = [i]; }
+        else if (counts[i] === min) candidates.push(i);
+      }
+      return candidates[Math.floor(Math.random() * candidates.length)];
+    }
+    return 0;
+  }
+
+  function flashServer(idx) {
+    const box = document.getElementById('srv-' + idx);
+    box.classList.add('hit');
+    setTimeout(() => box.classList.remove('hit'), 350);
+  }
+
+  function simStep() {
+    const target = pickServer();
+    counts[target]++;
+    flashServer(target);
+
+    // Update counts
+    for (let i = 0; i < 4; i++) {
+      document.getElementById('srv-cnt-' + i).textContent = counts[i];
+    }
+    const total = counts.reduce((a, b) => a + b, 0);
+    document.getElementById('stat-total').textContent = total;
+
+    // Flash arrows
+    document.getElementById('arrow-1').classList.add('active');
+    document.getElementById('arrow-2').classList.add('active');
+    setTimeout(() => {
+      document.getElementById('arrow-1').classList.remove('active');
+      document.getElementById('arrow-2').classList.remove('active');
+    }, 250);
+  }
+
+  function toggleSim() {
+    const btn = document.getElementById('btn-sim');
+    if (simRunning) {
+      clearInterval(simTimer);
+      simRunning = false;
+      btn.textContent = 'Start Simulation';
+      btn.style.background = 'var(--accent)';
+    } else {
+      simTimer = setInterval(simStep, 500);
+      simRunning = true;
+      btn.textContent = 'Pause';
+      btn.style.background = '#dc2626';
+    }
+  }
+
+  function resetSim() {
+    for (let i = 0; i < 4; i++) {
+      counts[i] = 0;
+      document.getElementById('srv-cnt-' + i).textContent = '0';
+    }
+    rrIndex = 0;
+    document.getElementById('stat-total').textContent = '0';
+  }
+</script>
+{% endblock %}

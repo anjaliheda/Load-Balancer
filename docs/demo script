@@ -1,7 +1,7 @@
 DEMO SCRIPT — Traffic Inspection & Mitigation System
 =====================================================
 Audience: Professor (non-technical)
-Duration: ~10–15 minutes
+Duration: ~15–20 minutes
 
 
 ────────────────────────────────────────────────────────────
@@ -16,46 +16,183 @@ BEFORE THE DEMO
 
    http://localhost:8080
 
-3. Wait until the top status bar shows:
-   - IDMS     → healthy  (green dot)
+3. You land on the Live Demo page (Page 5 — "Live Demo" tab is active).
+   Wait until the top status bar shows:
+   - IDMS         → healthy  (green dot)
    - Load Balancer → healthy  (green dot)
    - Servers online → 4 / 4
 
-   If any are red, wait 10–15 seconds and refresh. Docker is still starting up.
+   If any are red, wait 10–15 seconds and refresh. Docker is still starting.
 
-4. Make sure all counters read 0. If not, click
-   "Reset — Unblock All Demo IPs" to clear leftover state.
+4. The anomaly baseline builds automatically in the background.
+   There is NO warm-up button to click — the system does it on its own.
+   You will see the Allow counter slowly climbing on the Live Demo page.
+   After ~15 seconds the anomaly engine has enough samples to detect bursts.
 
-
-────────────────────────────────────────────────────────────
-OPENING EXPLANATION (say this before touching anything)
-────────────────────────────────────────────────────────────
-
-"This is a load balancer — it sits in front of four servers and
- distributes incoming requests across them so no single server
- gets overwhelmed.
-
- The problem is that not all traffic is legitimate. Attackers can
- send fake API keys, inject malicious code into requests, or just
- flood the system with thousands of requests per second to bring
- it down.
-
- What I've built is an IDMS — an Intrusion Detection and
- Mitigation System — that sits in front of the load balancer and
- inspects every single request before it reaches a server.
-
- It works in three layers. I'll demonstrate each one."
+5. Make sure all counters read 0. If not, click
+   "Reset — Clear All Demo State" to wipe leftover state from a previous run.
 
 
 ────────────────────────────────────────────────────────────
-PHASE 1 — RULE ENGINE  (purple badge in the dashboard)
+WALKTHROUGH STRUCTURE
 ────────────────────────────────────────────────────────────
 
-What it is:
-  A set of hard rules that run on every request in microseconds.
-  No learning needed — it either matches a pattern or it doesn't.
+The dashboard has 5 tabs in the navigation bar at the top:
 
---- Demo 1a: Wrong API Key ---
+  1 · Load Balancer   2 · Rule Engine   3 · Anomaly Engine
+  4 · Mitigation       5 · Live Demo
+
+Walk through pages 1–4 as visual explanations (no live attack needed).
+Use page 5 for the live demonstrations.
+
+
+────────────────────────────────────────────────────────────
+PAGE 1 — LOAD BALANCER  (click tab "1 · Load Balancer")
+────────────────────────────────────────────────────────────
+
+Say:
+  "This is the load balancer. It sits in front of four identical
+   backend servers and distributes incoming requests across them
+   so no single server gets overwhelmed.
+
+   I'll show you what that looks like."
+
+Action: Click [Start Simulation]
+
+Watch the animated diagram:
+  - Requests travel from the Client box to the Load Balancer
+  - From there they fan out to the four server boxes in sequence
+    (round robin — one after another, evenly)
+
+Say:
+  "That's round robin — request 1 goes to Server 1, request 2
+   to Server 2, and so on. But there are two other modes."
+
+Action: Click [Source Hashing], then [Least Loaded]
+
+Say:
+  "Source hashing always sends the same type of request to the
+   same server — useful for caching. Least loaded always picks
+   the server with the fewest active requests right now.
+
+   Scroll down to see what we improved for each algorithm."
+
+Point to the Before/After table:
+  - Round robin: added background health checks (no per-request HTTP probes),
+    thread-safe iterator lock
+  - Source hashing: MD5 first-8-chars optimisation, ring fallback on failure
+  - Least loaded: removed duplicate load counter, random jitter for tie-breaking
+
+
+────────────────────────────────────────────────────────────
+PAGE 2 — RULE ENGINE  (click tab "2 · Rule Engine")
+────────────────────────────────────────────────────────────
+
+Say:
+  "The load balancer only decides WHERE to send traffic, not
+   WHETHER it should be sent. That's the problem we're solving.
+
+   The first security layer is the Rule Engine. It checks every
+   request against six fixed rules — like a bouncer with a list."
+
+Point to the pipeline diagram:
+  - Rule Engine box is highlighted; everything else is dimmed
+  - "It sits in front of the load balancer — every request passes
+    through here first."
+
+Scroll to the rule cards:
+  - Explain each briefly: auth check first (API key), then injection
+    patterns, then rate limiting, endpoint scanning, payload size
+
+Say:
+  "The order matters. An unauthenticated request is rejected
+   immediately without even checking if it contains SQL injection —
+   that saves processing time."
+
+Point to the request trace:
+  - "This shows a SQL injection attempt flowing through the pipeline:
+    it passes the auth check, then hits the injection detector and
+    gets redirected to the honeypot instead of being blocked."
+
+
+────────────────────────────────────────────────────────────
+PAGE 3 — ANOMALY ENGINE  (click tab "3 · Anomaly Engine")
+────────────────────────────────────────────────────────────
+
+Say:
+  "The rule engine is fast but it only catches known patterns.
+   A smart attacker could spread their flood over a longer time
+   period and stay under the rate limit.
+
+   The Anomaly Engine catches that. Instead of a fixed rule, it
+   learns what normal traffic looks like for each IP address, then
+   flags behaviour that deviates significantly."
+
+Point to the Z-score formula:
+  "This is the formula — a Modified Z-score. It measures how
+   far each request's arrival time is from the learned average
+   for that IP. Once the gap drops far enough below the baseline,
+   the system knows something has changed."
+
+Point to the IAT distribution chart:
+  "The blue bars are the steady baseline. The orange spike is
+   what a burst attack looks like — requests arriving much faster
+   than the learned normal."
+
+Check the baseline status indicator:
+  "This shows the anomaly engine is already warmed up — it started
+   building the baseline automatically when the system booted.
+   No manual action needed."
+
+
+────────────────────────────────────────────────────────────
+PAGE 4 — MITIGATION  (click tab "4 · Mitigation")
+────────────────────────────────────────────────────────────
+
+Say:
+  "The Mitigation Controller is the final decision maker.
+   It takes the verdict from the Rule Engine and Anomaly Engine
+   and decides exactly what to do."
+
+Point to the decision tree:
+  - Block → 403 returned immediately
+  - Honeypot → redirected to decoy server
+  - Deprioritise → forwarded but tagged
+  - Allow → forwarded normally
+
+Say:
+  "Notice the middle option — deprioritise. If the system isn't
+   sure, it lets the request through but marks it as suspicious.
+   If enough suspicious requests come from the same IP within
+   two minutes, it automatically escalates to a full block."
+
+Action: Click [Add Strike] repeatedly in the escalation simulator
+
+Watch the progress bar fill to 8 and fire "ESCALATION" at the end.
+
+Say:
+  "That's 8 suspicious events — the threshold. The system learned
+   on its own that this is not a normal traffic spike."
+
+Point to the persistence section:
+  "All of this state is saved to SQLite on disk, not just in memory.
+   If the IDMS container restarts, the block history survives."
+
+
+────────────────────────────────────────────────────────────
+PAGE 5 — LIVE DEMO  (click tab "5 · Live Demo")
+────────────────────────────────────────────────────────────
+
+Say:
+  "Now let me show all of this working in real time. I'll trigger
+   each type of attack and you'll see the counters and events
+   table update live."
+
+The page auto-refreshes every 2 seconds. Counters should read 0
+(or click Reset first).
+
+
+--- Demo 1: Wrong API Key ---
 
 Say:
   "Every request must include a valid API key. Watch what happens
@@ -63,148 +200,84 @@ Say:
 
 Action: Click  [Wrong API Key]
 
-Watch the events table:
+Watch the detections table:
   - A new row appears immediately
-  - Result column: red "Blocked" pill
-  - Detection column: purple P1 badge + "Wrong API Key"
-  - What happened: "API key did not match — access denied"
+  - Outcome: red "Blocked" pill
+  - Rule: "Wrong API Key"
   - Block counter: goes up by 1
 
 Say:
-  "That was caught and rejected before it even reached the load
-   balancer. Zero compute wasted on the real servers."
+  "Caught and rejected before it even reached the load balancer.
+   Zero compute wasted on the real servers."
 
-Click [Reset] before the next demo.
+Action: Click  [Reset]
 
---- Demo 1b: SQL Injection ---
+
+--- Demo 2: SQL Injection ---
 
 Say:
-  "A common attack is SQL injection — the attacker embeds database
-   commands inside a normal-looking request, hoping the server will
-   execute them. Watch what happens."
+  "SQL injection is when an attacker hides database commands inside
+   a normal-looking request. Watch what we do with it."
 
 Action: Click  [SQL Injection]
 
-Watch the events table:
-  - Result column: orange "Honeypot" pill
-  - Detection column: purple P1 + "SQL/NoSQL Injection"
-  - What happened: "Attack pattern found in the request body —
-                    sent to honeypot instead of real server"
+Watch the detections table:
+  - Outcome: orange "Honeypot" pill
+  - Rule: "SQL/NoSQL Injection"
 
 Say:
-  "Notice it wasn't just blocked — it was redirected to a honeypot.
-   That's a decoy server. The attacker gets back a fake success
-   response, so they think their attack worked and keep sending more.
-   Meanwhile we're capturing everything they send, and the real
-   servers never see a single malicious byte."
+  "It wasn't blocked — it was redirected to a honeypot. That's a
+   decoy server. The attacker gets back a fake success response,
+   so they think their attack worked and keep sending more. We
+   capture everything they send. The real servers never see it."
 
-Click [Reset] before the next demo.
+Action: Click  [Reset]
 
---- Demo 1c: Rate Flood ---
+
+--- Demo 3: Rate Flood ---
 
 Say:
   "A denial-of-service attack just hammers the system with as many
-   requests as possible to exhaust its resources. I'm going to
-   send 250 requests in under a second from the same IP."
+   requests as possible. I'm going to send 250 requests in under
+   three seconds from the same IP."
 
 Action: Click  [Rate Flood (250 req)]
 
 Watch the dashboard:
-  - The Requests chart spikes sharply
-  - Block counter climbs rapidly (will reach ~50+ blocks)
-  - Events table fills with red "Blocked" rows
-  - Detection column shows "Rate Flood"
+  - The Allow counter climbs briefly, then the Block counter takes over
+  - Request rate chart spikes
+  - Events table fills with red "Blocked" rows labelled "Rate Flood"
 
 Say:
   "The rule engine allows up to 200 requests per 10-second window
-   per IP. Once that threshold is crossed, the IP is blocked for
-   5 minutes and all further requests are rejected immediately —
-   the attacker can't get anything through."
+   per IP. Once that's crossed, the IP is blocked and all further
+   requests are rejected immediately."
 
-Point to Blocked IPs panel:
-  "You can see the attacker's IP listed here with a countdown timer
-   showing when the block expires. I can manually unblock it if
-   needed, or just let the timer run."
-
-Click [Reset].
+Action: Click  [Reset]
 
 
-────────────────────────────────────────────────────────────
-PHASE 2 — ANOMALY ENGINE  (green badge in the dashboard)
-────────────────────────────────────────────────────────────
-
-What it is:
-  Unlike Phase 1, this layer doesn't use fixed rules.
-  It watches each IP's request timing over time, builds a baseline
-  of what "normal" looks like for that IP, and flags behaviour
-  that deviates significantly from that baseline.
-  This catches sophisticated attacks that stay under fixed limits.
+--- Demo 4: Burst Anomaly ---
 
 Say:
-  "Phase 1 is good at catching known attack patterns. But a smart
-   attacker might spread their flood across a longer time period,
-   staying just under the rate limit. Phase 2 catches that.
+  "This one is subtler. The attacker is using a valid API key,
+   sending valid requests — just suddenly sending them much faster
+   than they usually do. No fixed rule would catch this.
+   The Anomaly Engine will."
 
-   I need to teach the system what normal traffic from this IP
-   looks like first. I'll send 60 requests at a steady pace."
+Action: Click  [Burst Anomaly]
 
---- Demo 2a: Warm Up ---
-
-Action: Click  [1 · Warm Up Baseline]
-
-Watch:
-  - Status bar says "Building anomaly baseline — 60 requests at
-    normal speed (~3 seconds)…"
-  - Allow counter climbs from 0 to ~60 over ~3 seconds
-  - Events table fills with green "Allowed" rows
+Watch the detections table:
+  - New rows appear with "Burst Anomaly" or "Anomaly" label
+  - Outcome: yellow/amber "Deprioritised" pill
+  - Rule engine shows clean; anomaly engine fires
 
 Say:
-  "The anomaly engine is recording the time gap between each request.
-   After enough samples, it has a statistical model of this IP's
-   normal behaviour — how frequently they send requests."
+  "The inter-arrival time between requests dropped far below the
+   learned baseline for this IP. The system flagged them. If they
+   keep coming, that escalates to a full block automatically — the
+   same escalation you saw on Page 4."
 
-Wait until the Allow counter stops climbing (~3 seconds).
-
---- Demo 2b: Burst Attack ---
-
-Say:
-  "Now I'll simulate a burst attack — same IP, same request type,
-   but sent 10 times faster than the established baseline."
-
-Action: Click  [2 · Trigger Burst Attack]
-
-Watch the events table:
-  - New rows appear with green P2 badge "Burst Anomaly"
-  - Result: yellow "Flagged" pill
-  - What happened: "Requests arriving much faster than the learned
-                    baseline for this IP"
-
-Say:
-  "The anomaly engine detected that the inter-arrival time between
-   requests dropped far below the learned baseline. It doesn't need
-   a rule that says '200 req/s is too many' — it just knows this
-   is abnormal for this particular IP.
-
-   These requests are flagged and forwarded with a warning tag, not
-   blocked outright — because it could be a legitimate spike in
-   traffic. But if this keeps happening..."
-
-Action: Click  [2 · Trigger Burst Attack]  again (2–3 more times)
-
-Watch:
-  - Flagged counter keeps climbing
-  - Eventually a red "Blocked" row appears with P3 pink badge
-    "Escalation Block"
-  - What happened: "Too many suspicious events — automatically
-                    upgraded to a full block"
-
-Say:
-  "That's Phase 3 — the mitigation controller. After 20 flagged
-   events within 2 minutes from the same IP, it automatically
-   escalates from 'suspicious' to 'fully blocked'. The system
-   learned on its own that this is not a normal traffic spike."
-
-Click [Reset].
+Action: Click  [Reset]
 
 
 ────────────────────────────────────────────────────────────
@@ -217,20 +290,15 @@ Point to the counter cards:
    - Green: legitimate traffic flowing through normally
    - Red: attackers being rejected
    - Orange: injections being trapped in the honeypot
-   - Amber: suspicious traffic being flagged
+   - Amber: suspicious traffic being flagged and monitored
 
-   All of this happens before a single request touches a real server."
+   All of this happens before a single request touches a real server.
 
-Point to the algorithm selector:
-
-  "The load balancer itself supports three distribution algorithms —
-   round robin, source hashing, and least loaded — which I can
-   switch live from this dropdown."
-
-Say:
-  "The next phase of the project is a formal attack simulation and
-   evaluation, where I measure false positive rates, detection
-   latency, and throughput under each algorithm."
+   The next phase of the project is a formal experimental evaluation
+   where I run four controlled scenarios — baseline with no security,
+   under attack with no security, rule-only protection, and full
+   two-stage protection — and measure false positive rates, detection
+   latency, and throughput."
 
 
 ────────────────────────────────────────────────────────────
@@ -242,14 +310,18 @@ Dashboard shows "connection error" or red status:
   → Any container not "Up"?  Run:  docker-compose up -d
   → Wait 15 seconds and refresh the browser
 
-Phase 2 burst doesn't show anomaly events:
-  → The 120-second anomaly window may have expired.
-  → Click Reset, then Warm Up again, then Burst immediately after.
+Phase 2 burst shows no anomaly events:
+  → The baseline may not have warmed up yet (needs ~15s of traffic).
+  → Wait for the Allow counter on the Live Demo page to climb to 150+,
+    then click Burst Anomaly.
+  → If the demo IP was recently blocked (from escalation), click Reset
+    first — the anomaly baseline rebuilds automatically after reset.
 
-All counters already show high numbers:
-  → Click Reset to clear demo IPs, but counters are totals
-    since startup — that is fine, focus on new rows in the table.
+All counters already show high numbers from a previous run:
+  → Click Reset to clear demo state. Counters reset to 0.
+  → Baseline rebuilds in ~15s — then all demos are ready again.
 
-Need to fully reset everything:
+Need to fully wipe everything (including MongoDB):
   → docker-compose down -v && docker-compose up -d
-  → This wipes the SQLite database and all in-memory state.
+  → This wipes all SQLite databases and MongoDB data.
+  → Wait ~30s for all services to pass health checks.

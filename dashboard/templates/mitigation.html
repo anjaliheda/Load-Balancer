@@ -1,0 +1,411 @@
+{% extends "base.html" %}
+{% block title %}Mitigation Controller — IDMS Dashboard{% endblock %}
+
+{% block extra_css %}
+/* ── Pipeline ── */
+.arch-pipeline {
+  display: flex; align-items: center; justify-content: center; gap: 0; padding: 24px 0;
+}
+.pipe-node {
+  text-align: center; padding: 14px 20px; border-radius: 10px;
+  border: 2px solid var(--border); background: var(--card); min-width: 120px;
+}
+.pipe-node .pn-icon  { font-size: 24px; margin-bottom: 4px; }
+.pipe-node .pn-label { font-size: 12px; font-weight: 600; color: var(--text); }
+.pipe-node .pn-sub   { font-size: 11px; color: var(--muted); }
+.pipe-node.highlighted {
+  border-color: var(--p3); background: #fff1f2;
+  box-shadow: 0 0 0 4px rgba(219,39,119,0.1);
+}
+.pipe-node.dimmed { opacity: 0.4; }
+.pipe-arrow {
+  width: 40px; height: 2px; background: var(--border); position: relative; margin: 0 -2px;
+}
+.pipe-arrow::after {
+  content: ''; position: absolute; right: -5px; top: -4px;
+  border: 5px solid transparent; border-left: 6px solid var(--border);
+}
+
+/* ── Decision tree ── */
+.decision-tree {
+  display: flex; flex-direction: column; gap: 0; align-items: center;
+  padding: 20px 0;
+}
+.dt-row {
+  display: flex; align-items: center; gap: 16px; width: 100%; max-width: 800px;
+}
+.dt-connector {
+  width: 2px; height: 24px; background: var(--border); margin: 0 auto;
+}
+.dt-node {
+  flex: 1; padding: 14px 18px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--card);
+  display: flex; align-items: center; gap: 12px;
+}
+.dt-node .dt-icon { font-size: 20px; }
+.dt-node .dt-label { font-size: 13px; font-weight: 600; color: var(--text); }
+.dt-node .dt-desc  { font-size: 12px; color: var(--muted); }
+.dt-node.dt-question {
+  background: #f8fafc; border-color: var(--accent);
+  justify-content: center; text-align: center;
+}
+.dt-node.dt-block   { border-left: 4px solid var(--block); }
+.dt-node.dt-honey   { border-left: 4px solid var(--honeypot); }
+.dt-node.dt-deprio  { border-left: 4px solid var(--deprio); }
+.dt-node.dt-allow   { border-left: 4px solid var(--allow); }
+
+.dt-branch {
+  display: flex; gap: 16px; width: 100%; max-width: 800px;
+}
+.dt-branch-label {
+  font-size: 11px; font-weight: 700; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  padding: 4px 0;
+}
+
+/* ── Escalation visual ── */
+.esc-bar-wrap {
+  display: flex; align-items: center; gap: 12px; margin: 12px 0;
+}
+.esc-bar {
+  flex: 1; height: 28px; background: var(--bg); border-radius: 6px;
+  border: 1px solid var(--border); overflow: hidden; position: relative;
+}
+.esc-fill {
+  height: 100%; border-radius: 5px; transition: width 0.5s;
+  background: linear-gradient(90deg, #fbbf24, #f59e0b, #dc2626);
+}
+.esc-label {
+  font-size: 12px; font-weight: 600; color: var(--text); min-width: 80px;
+  text-align: right;
+}
+.esc-threshold {
+  position: absolute; right: 0; top: 0; bottom: 0; width: 2px;
+  background: var(--block);
+}
+.esc-threshold-label {
+  position: absolute; right: 4px; top: -18px; font-size: 10px;
+  color: var(--block); font-weight: 600;
+}
+
+/* ── Persistence table ── */
+.persist-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.persist-card {
+  border: 1px solid var(--border); border-radius: 10px;
+  padding: 18px 22px; background: var(--card);
+}
+.persist-card .pc-title {
+  font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 8px;
+}
+.persist-card .pc-body {
+  font-size: 13px; color: var(--muted); line-height: 1.7;
+}
+{% endblock %}
+
+{% block body %}
+<div class="page">
+
+  <div class="page-header">
+    <h2>Mitigation Controller <span style="color:var(--p3)">(Phase 3)</span></h2>
+    <p>Orchestrates the full pipeline &mdash; decides what to do with every request based on detection results</p>
+  </div>
+
+  <!-- Pipeline position -->
+  <div class="card">
+    <div class="card-title">The full request pipeline</div>
+    <div class="arch-pipeline">
+      <div class="pipe-node">
+        <div class="pn-icon">&#x1F4BB;</div>
+        <div class="pn-label">Client</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-node highlighted">
+        <div class="pn-icon">&#x1F6E1;</div>
+        <div class="pn-label">Mitigation Controller</div>
+        <div class="pn-sub">Orchestrator</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-node">
+        <div class="pn-icon">&#x1F4CB;</div>
+        <div class="pn-label">Rule Engine</div>
+        <div class="pn-sub">Phase 1</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-node">
+        <div class="pn-icon">&#x1F4CA;</div>
+        <div class="pn-label">Anomaly Engine</div>
+        <div class="pn-sub">Phase 2</div>
+      </div>
+      <div class="pipe-arrow"></div>
+      <div class="pipe-node">
+        <div class="pn-icon">&#x2696;</div>
+        <div class="pn-label">Load Balancer</div>
+      </div>
+    </div>
+    <div class="highlight-box rose">
+      The Mitigation Controller wraps around everything. It owns the per-request pipeline:
+      <b>block check &rarr; rule engine &rarr; anomaly engine &rarr; verdict execution</b>.
+      It short-circuits blocked IPs before wasting any detection cycles, logs every flagged event to SQLite,
+      manages timed blocks with auto-expiry, and escalates repeat offenders.
+    </div>
+  </div>
+
+  <!-- Decision tree -->
+  <div class="card">
+    <div class="card-title">Decision tree &mdash; what happens to each request</div>
+
+    <div class="decision-tree">
+      <!-- Step 1: Block check -->
+      <div class="dt-row">
+        <div class="dt-node dt-question" style="flex:1;">
+          <div><div class="dt-label" style="color:var(--accent);">Step 1: Is this IP currently blocked?</div></div>
+        </div>
+      </div>
+      <div style="display:flex; gap:16px; width:100%; max-width:800px;">
+        <div style="flex:1; text-align:center;">
+          <div class="dt-connector"></div>
+          <div class="dt-branch-label" style="color:var(--block);">Yes &mdash; blocked</div>
+          <div class="dt-node dt-block">
+            <div class="dt-icon">&#x1F6AB;</div>
+            <div>
+              <div class="dt-label">403 Forbidden</div>
+              <div class="dt-desc">Instant reject. No detection cycles wasted. Counter incremented.</div>
+            </div>
+          </div>
+        </div>
+        <div style="flex:1; text-align:center;">
+          <div class="dt-connector"></div>
+          <div class="dt-branch-label" style="color:var(--allow);">No &mdash; proceed</div>
+          <div class="dt-node" style="border-left:4px solid var(--accent);">
+            <div class="dt-icon">&#x27A1;</div>
+            <div>
+              <div class="dt-label">Run Rule Engine (Phase 1)</div>
+              <div class="dt-desc">Check auth, injection, rate, payload in priority order</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dt-connector"></div>
+
+      <!-- Step 2: Rule result -->
+      <div class="dt-row">
+        <div class="dt-node dt-question" style="flex:1;">
+          <div><div class="dt-label" style="color:var(--accent);">Step 2: Did any rule fire?</div></div>
+        </div>
+      </div>
+      <div style="display:flex; gap:16px; width:100%; max-width:800px;">
+        <div style="flex:1; text-align:center;">
+          <div class="dt-connector"></div>
+          <div class="dt-branch-label" style="color:var(--block);">Yes &mdash; flagged</div>
+          <div class="dt-node" style="border-left:4px solid var(--p1);">
+            <div class="dt-icon">&#x1F4CB;</div>
+            <div>
+              <div class="dt-label">Execute rule verdict</div>
+              <div class="dt-desc">Block, Honeypot, or Deprioritise based on rule severity</div>
+            </div>
+          </div>
+        </div>
+        <div style="flex:1; text-align:center;">
+          <div class="dt-connector"></div>
+          <div class="dt-branch-label" style="color:var(--allow);">No &mdash; clean</div>
+          <div class="dt-node" style="border-left:4px solid var(--p2);">
+            <div class="dt-icon">&#x1F4CA;</div>
+            <div>
+              <div class="dt-label">Run Anomaly Engine (Phase 2)</div>
+              <div class="dt-desc">Score against per-IP baseline using modified Z-score</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="dt-connector"></div>
+
+      <!-- Step 3: Final verdict -->
+      <div class="dt-row">
+        <div class="dt-node dt-question" style="flex:1;">
+          <div><div class="dt-label" style="color:var(--accent);">Step 3: Execute verdict</div></div>
+        </div>
+      </div>
+      <div style="display:flex; gap:8px; width:100%; max-width:800px; margin-top:8px;">
+        <div class="dt-node dt-block" style="flex:1;">
+          <div>
+            <div class="dt-label" style="color:var(--block);">Block</div>
+            <div class="dt-desc">403 response. IP added to block table with timed expiry.</div>
+          </div>
+        </div>
+        <div class="dt-node dt-honey" style="flex:1;">
+          <div>
+            <div class="dt-label" style="color:var(--honeypot);">Honeypot</div>
+            <div class="dt-desc">Forward to fake server. Attacker gets 200 with fake data.</div>
+          </div>
+        </div>
+        <div class="dt-node dt-deprio" style="flex:1;">
+          <div>
+            <div class="dt-label" style="color:var(--deprio);">Deprioritise</div>
+            <div class="dt-desc">Forward with X-IDMS-Tag header. Strike counter incremented.</div>
+          </div>
+        </div>
+        <div class="dt-node dt-allow" style="flex:1;">
+          <div>
+            <div class="dt-label" style="color:var(--allow);">Allow</div>
+            <div class="dt-desc">Forward to load balancer normally.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Escalation -->
+  <div class="card">
+    <div class="card-title">Escalation: deprioritise &rarr; auto-block</div>
+    <div class="row-2">
+      <div>
+        <p style="font-size:13px; color:var(--muted); line-height:1.7; margin-bottom:16px;">
+          A single anomalous request gets <b>deprioritised</b> (forwarded but tagged).
+          But repeated anomalies from the same IP indicate sustained suspicious activity.
+          The escalation system tracks "strikes" in a sliding window &mdash;
+          when the count hits the threshold, the IP is automatically upgraded to a full timed block.
+        </p>
+
+        <table>
+          <thead><tr><th>Parameter</th><th>Value</th><th>Why</th></tr></thead>
+          <tbody>
+            <tr>
+              <td style="font-weight:600;">Strike threshold</td>
+              <td><span class="badge badge-red">8 strikes</span></td>
+              <td style="color:var(--muted)">Buffer against jitter false positives while catching sustained bursts</td>
+            </tr>
+            <tr>
+              <td style="font-weight:600;">Window</td>
+              <td><span class="badge badge-blue">120 seconds</span></td>
+              <td style="color:var(--muted)">Old strikes expire &mdash; a brief anomaly doesn't haunt the IP forever</td>
+            </tr>
+            <tr>
+              <td style="font-weight:600;">Block duration</td>
+              <td><span class="badge badge-amber">30 seconds</span></td>
+              <td style="color:var(--muted)">Short for demo repeatability &mdash; production would use 5&ndash;15 minutes</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:12px;">
+          Escalation strike counter (simulated)
+        </div>
+        <div class="esc-bar-wrap">
+          <span class="esc-label">Strikes</span>
+          <div class="esc-bar">
+            <div class="esc-fill" id="esc-fill" style="width:0%"></div>
+            <div class="esc-threshold" style="left:100%;"></div>
+          </div>
+          <span style="font-size:12px; color:var(--muted);" id="esc-count">0 / 8</span>
+        </div>
+        <div style="display:flex; gap:10px; margin-top:12px;">
+          <button class="btn btn-purple" onclick="addStrike()">+ Strike</button>
+          <button class="btn btn-gray" onclick="resetStrikes()">Reset</button>
+        </div>
+        <div id="esc-status" style="margin-top:12px; font-size:13px; color:var(--muted); min-height:20px;"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Persistence -->
+  <div class="card">
+    <div class="card-title">Persistence &amp; state management</div>
+    <div class="persist-grid">
+      <div class="persist-card">
+        <div class="pc-title">SQLite Database</div>
+        <div class="pc-body">
+          Two tables stored in a Docker volume (survives container restarts):
+          <ul style="margin:8px 0 0 18px;">
+            <li><b>detection_log</b> &mdash; every flagged event with timestamp, IP, rule, severity, action, and latency</li>
+            <li><b>ip_reputation</b> &mdash; per-IP status (clean/flagged/blocked), block expiry, and hit count</li>
+          </ul>
+          Uses WAL mode with a persistent connection for performance. All access protected by a global lock.
+        </div>
+      </div>
+      <div class="persist-card">
+        <div class="pc-title">In-Memory State</div>
+        <div class="pc-body">
+          Fast-path data kept in memory for the dashboard:
+          <ul style="margin:8px 0 0 18px;">
+            <li><b>Metrics ring</b> &mdash; last 500 events (deque, O(1) append/evict)</li>
+            <li><b>Counters</b> &mdash; outcome totals (allow/block/honeypot/deprioritise)</li>
+            <li><b>Strike windows</b> &mdash; per-IP deque of deprioritise timestamps for escalation</li>
+            <li><b>Rate windows</b> &mdash; per-IP request timestamps (rule engine)</li>
+            <li><b>IP baselines</b> &mdash; per-IP IAT distributions (anomaly engine)</li>
+          </ul>
+          All cleared on Reset to support repeatable demos. Stale IP states auto-pruned every 60s.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Block management -->
+  <div class="card">
+    <div class="card-title">Block duration by severity</div>
+    <table>
+      <thead><tr><th>Severity</th><th>Duration</th><th>Triggered by</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><span class="badge badge-amber">Medium</span></td>
+          <td style="font-weight:600;">60 seconds</td>
+          <td style="color:var(--muted);">Invalid API key, oversized payload</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-red">High</span></td>
+          <td style="font-weight:600;">5 minutes</td>
+          <td style="color:var(--muted);">Rate limit breach, escalated anomaly</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-purple">Critical</span></td>
+          <td style="font-weight:600;">15 minutes</td>
+          <td style="color:var(--muted);">SQL injection (if block chosen over honeypot)</td>
+        </tr>
+        <tr>
+          <td><span class="badge badge-orange">Escalation</span></td>
+          <td style="font-weight:600;">30 seconds</td>
+          <td style="color:var(--muted);">8 deprioritise strikes in 120s window (demo-tuned)</td>
+        </tr>
+      </tbody>
+    </table>
+    <p style="margin-top:12px; font-size:12px; color:var(--muted);">
+      Blocks auto-expire. When checked and found expired, the IP is immediately cleaned up
+      (reputation reset, rule/anomaly state cleared, strike window emptied).
+    </p>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // ── Escalation simulation ──────────────────────────────────────────────────
+  let strikes = 0;
+  const MAX_STRIKES = 8;
+
+  function addStrike() {
+    if (strikes >= MAX_STRIKES) return;
+    strikes++;
+    updateEscBar();
+    if (strikes >= MAX_STRIKES) {
+      document.getElementById('esc-status').innerHTML =
+        '<span style="color:var(--block); font-weight:600;">' +
+        'ESCALATION \u2014 IP auto-blocked for 30 seconds</span>';
+    }
+  }
+
+  function resetStrikes() {
+    strikes = 0;
+    updateEscBar();
+    document.getElementById('esc-status').textContent = '';
+  }
+
+  function updateEscBar() {
+    const pct = (strikes / MAX_STRIKES) * 100;
+    document.getElementById('esc-fill').style.width = pct + '%';
+    document.getElementById('esc-count').textContent = strikes + ' / ' + MAX_STRIKES;
+  }
+</script>
+{% endblock %}
