@@ -12,6 +12,8 @@ Modes
   sqli       SQL/NoSQL injection payloads → trips sqli rule → honeypot
   mixed      Concurrent legitimate + flood traffic → measures collateral
              impact on clean users during an active attack
+  legit      Clean legitimate traffic only → baseline latency (S1/S2) and
+             false-positive rate measurement (S3/S4)
   all        Run flood → sqli → slow_rate → mixed in sequence
 
 Design notes
@@ -32,6 +34,8 @@ Usage (inside Docker network)
   python attack_client.py --mode sqli --count 30
   python attack_client.py --mode mixed --rate 40 --duration 20
   python attack_client.py --mode all --output results/run1.csv
+  python attack_client.py --mode legit --rate 15 --duration 60
+  python attack_client.py --mode legit --idms-url http://localhost:5000 --rate 15 --duration 60
 
 Usage (from host, system running)
 ----------------------------------
@@ -66,6 +70,8 @@ ATTACK_IPS = {
     "sqli":        "192.168.100.30",
     "mixed_atk":   "192.168.100.40",
     "mixed_legit": "192.168.100.50",
+    "ramp":        "192.168.100.60",
+    "legit":       "192.168.100.70",
 }
 
 CSV_HEADER = [
@@ -851,6 +857,179 @@ def run_stress(idms_url: str, start_rate: float, max_rate: float,
               f">50% detection — raise --max-rate to find the breaking point")
 
 
+def run_ramp(idms_url: str, store: ResultStore) -> None:
+    """
+    Gradual rate escalation attack — the evasion test for the anomaly engine.
+
+    Sends requests starting at 5 req/s and stepping up by 3 req/s every 25 seconds,
+    reaching 17 req/s at the final step.  Every step stays well under the 200/10s
+    rate-limit ceiling (17 × 10 = 170 < 200), so the rule engine never fires.
+
+    Research question: does the anomaly engine catch gradual acceleration, or does its
+    rolling 30-second baseline adapt with the attacker?
+
+    Expected result: probably partial / no detection.  The baseline median updates
+    continuously — by the time the rate reaches 17 req/s, recent history at 14 req/s
+    has already shifted the median downward, so the Z-score of the final step may stay
+    below threshold=1.5.  This is an honest finding: slow ramp is the gap case for
+    statistical IAT detection with a short window.
+
+    Steps: 5 → 8 → 11 → 14 → 17 req/s  (5 steps × 25s = 125s total, ~1375 requests)
+    """
+    STEPS          = [5, 8, 11, 14, 17]   # req/s per step — all below 20 req/s rate limit
+    STEP_DURATION  = 25.0                  # seconds per step
+    # Each step uses its own IP so rate-limit state never carries over between steps.
+    # This isolates the anomaly engine as the only possible detection mechanism.
+    STEP_IPS       = [f"192.168.100.{60 + i}" for i in range(len(STEPS))]
+
+    mode = "ramp"
+
+    _divider("MODE: RAMP (EVASION TEST)")
+    print(f"  Steps      : {' → '.join(str(r) for r in STEPS)} req/s  "
+          f"({STEP_DURATION:.0f}s each, {len(STEPS) * STEP_DURATION:.0f}s total)")
+    print(f"  IPs        : {STEP_IPS[0]} … {STEP_IPS[-1]}  (fresh IP per step — isolates anomaly engine)")
+    print(f"  Rate limit : 200 req/10s  (max step {max(STEPS)} × 10 = {max(STEPS)*10} — never triggers)")
+    print(f"  Research Q : does the anomaly engine detect gradual acceleration,")
+    print(f"               or does its 30s rolling baseline adapt with the attacker?")
+
+    since_ts = time.time()
+    req_id   = 0
+
+    for step_num, (rate, ip) in enumerate(zip(STEPS, STEP_IPS)):
+        _unblock_ip(idms_url, ip)
+        interval = 1.0 / rate
+        n        = int(rate * STEP_DURATION)
+        phase    = f"step_{rate}"
+
+        print(f"\n  [Step {step_num + 1}/{len(STEPS)}] {rate} req/s  ip={ip}  ({n} requests over {STEP_DURATION:.0f}s)...")
+
+        threads = []
+        for j in range(n):
+            req_id += 1
+            t = threading.Thread(
+                target=_send,
+                args=(idms_url, _legit_task(), ip, mode, phase, req_id, store),
+                daemon=True,
+            )
+            threads.append(t)
+            t.start()
+            time.sleep(interval)
+
+        for t in threads:
+            t.join(timeout=15)
+
+        step_rows = [r for r in store.rows() if r[1] == mode and r[2] == phase]
+        dep  = sum(1 for r in step_rows if r[9] == "deprioritise")
+        blk  = sum(1 for r in step_rows if r[9] == "blocked")
+        sent = len(step_rows)
+        print(f"  → sent={sent}  deprioritised={dep}  blocked={blk}  "
+              f"detected={dep+blk}  ({(dep+blk)/sent*100:.1f}%)")
+
+    # ── Summary ───────────────────────────────────────────────────────────────
+    _divider("RAMP — Summary")
+    all_ramp = [r for r in store.rows() if r[1] == mode]
+    total    = len(all_ramp)
+    dep_tot  = sum(1 for r in all_ramp if r[9] == "deprioritise")
+    blk_tot  = sum(1 for r in all_ramp if r[9] == "blocked")
+    allow    = sum(1 for r in all_ramp if r[9] == "allowed")
+    det_pct  = (dep_tot + blk_tot) / total * 100 if total else 0
+
+    print(f"  Total requests : {total}")
+    print(f"  Allowed        : {allow}  ({allow/total*100:.1f}%)")
+    print(f"  Deprioritised  : {dep_tot}  ({dep_tot/total*100:.1f}%)")
+    print(f"  Blocked        : {blk_tot}  ({blk_tot/total*100:.1f}%)")
+    print(f"\n  Detection rate : {det_pct:.1f}%")
+
+    if det_pct < 10:
+        print(f"  Verdict        : ramp EVADES detection — baseline adapts with attacker")
+        print(f"                   (expected: this is the known gap case for short-window IAT scoring)")
+    elif det_pct < 50:
+        print(f"  Verdict        : partial detection — anomaly engine caught late-stage acceleration")
+    else:
+        print(f"  Verdict        : ramp detected — anomaly baseline did not fully adapt")
+
+    all_detections = []
+    for ip in STEP_IPS:
+        all_detections.extend(_fetch_idms_detections(idms_url, ip, since_ts))
+    if all_detections:
+        print(f"\n  IDMS detection log: {len(all_detections)} events across all step IPs")
+        by_action: dict = defaultdict(int)
+        for d in all_detections:
+            by_action[d.get("action", "?")] += 1
+        for action, cnt in sorted(by_action.items(), key=lambda x: -x[1]):
+            print(f"    {action:<20} : {cnt}")
+
+
+def run_legit(idms_url: str, rate: float, duration: float,
+              store: ResultStore) -> None:
+    """
+    Send clean legitimate traffic at `rate` req/s for `duration` seconds.
+
+    Used for three research measurements:
+      S1 baseline  — direct to LB (--idms-url http://localhost:5000),
+                     no IDMS overhead, measures raw server latency.
+      S3/S4 legit  — through IDMS, measures inspection overhead and FPR.
+      FPR run      — feed results to results_analyzer.py --fpr to count
+                     any false-positive blocks on clean traffic.
+
+    Traffic is sequential (one request at a time) so the inter-arrival time
+    is stable and the anomaly engine is never accidentally triggered by
+    concurrency.  Rate is kept at ≤15 req/s — well under the 200/10s
+    rate-limit ceiling — so the rule engine never fires on this IP.
+    """
+    ip   = ATTACK_IPS["legit"]
+    mode = "legit"
+    total = int(rate * duration)
+    interval = 1.0 / rate
+
+    _divider("MODE: LEGIT TRAFFIC")
+    print(f"  IP       : {ip}")
+    print(f"  Rate     : {rate:.1f} req/s  →  {total} requests over {duration:.0f}s")
+    print(f"  Purpose  : baseline latency + FPR measurement (no attacks, no blocks expected)")
+
+    _unblock_ip(idms_url, ip)
+    since_ts = time.time()
+
+    for i in range(total):
+        _send(idms_url, _legit_task(), ip, mode, "traffic", i + 1, store)
+        time.sleep(interval)
+
+    # ── Summary ───────────────────────────────────────────────────────────────
+    _divider("LEGIT — Summary")
+    rows = [r for r in store.rows() if r[1] == mode and r[2] == "traffic"]
+    if not rows:
+        print("  No results recorded.")
+        return
+
+    outcomes: dict = defaultdict(int)
+    for r in rows:
+        outcomes[r[9]] += 1
+
+    total_recorded = len(rows)
+    print(f"  Requests sent  : {total_recorded}")
+    for outcome, count in sorted(outcomes.items(), key=lambda x: -x[1]):
+        pct = count / total_recorded * 100
+        print(f"  {outcome:<22}: {count:4d}  ({pct:.1f}%)")
+
+    times_ms = store.response_times_ms(mode=mode, phase="traffic")
+    if times_ms:
+        print(f"\n  Response time (ms)")
+        print(f"    mean   : {statistics.mean(times_ms):.1f}")
+        print(f"    median : {statistics.median(times_ms):.1f}")
+        print(f"    min    : {min(times_ms):.1f}")
+        print(f"    max    : {max(times_ms):.1f}")
+        if len(times_ms) > 1:
+            print(f"    stdev  : {statistics.stdev(times_ms):.1f}")
+
+    fp_count = sum(1 for r in rows if r[9] in ("blocked", "deprioritise"))
+    fpr = fp_count / total_recorded * 100 if total_recorded else 0
+    print(f"\n  False positives: {fp_count}  (FPR = {fpr:.2f}%)")
+    if fp_count == 0:
+        print(f"  FPR verdict    : 0% — IDMS passed all clean traffic without false blocks")
+    else:
+        print(f"  FPR verdict    : {fpr:.2f}% — investigate via results_analyzer.py --fpr")
+
+
 # ── CSV and reporting ──────────────────────────────────────────────────────────
 
 def _print_cross_mode_table(store: ResultStore) -> None:
@@ -886,7 +1065,7 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     p.add_argument(
         "--mode",
-        choices=["flood", "slow_rate", "sqli", "mixed", "all", "stress"],
+        choices=["flood", "slow_rate", "sqli", "mixed", "all", "stress", "ramp", "legit"],
         required=True,
         help="Attack mode to run.",
     )
@@ -915,8 +1094,8 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=None,
         help=(
-            "Attack req/s. "
-            "flood default=50, mixed default=30."
+            "Request rate (req/s). "
+            "flood default=50, mixed default=30, legit default=15."
         ),
     )
     p.add_argument(
@@ -924,8 +1103,8 @@ def _build_parser() -> argparse.ArgumentParser:
         type=float,
         default=None,
         help=(
-            "Attack duration in seconds. "
-            "flood default=15, slow_rate default=30, mixed default=20."
+            "Attack/traffic duration in seconds. "
+            "flood default=15, slow_rate default=30, mixed default=20, legit default=60."
         ),
     )
 
@@ -1120,6 +1299,17 @@ def main() -> None:
                 max_rate=args.max_rate,
                 step=args.step,
                 step_duration=args.step_duration,
+                store=store,
+            )
+
+        elif args.mode == "ramp":
+            run_ramp(idms_url, store=store)
+
+        elif args.mode == "legit":
+            run_legit(
+                idms_url,
+                rate=args.rate or 15.0,
+                duration=args.duration or 60.0,
                 store=store,
             )
 

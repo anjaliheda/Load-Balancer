@@ -1,0 +1,721 @@
+────────────────── ATTACK SIMULATION CLIENT ──────────────────
+  IDMS URL : http://localhost:5001
+  Mode     : ramp
+  Output   : results\attack_ramp_20260405_123216.csv
+  Started  : 12:32:16
+
+───────────────── MODE: RAMP (EVASION TEST) ──────────────────
+  Target IP  : 192.168.100.60
+  Steps      : 5 → 8 → 11 → 14 → 17 req/s  (25s each, 125s total)
+  Rate limit : 200 req/10s  (max step 17 × 10 = 170 — never triggers)
+  Research Q : does the anomaly engine detect gradual acceleration,
+               or does its 30s rolling baseline adapt with the attacker?
+
+  [Step 1/5] 5 req/s  (125 requests over 25s)...
+  → sent=125  deprioritised=0  blocked=0  detected=0  (0.0%)
+
+  [Step 2/5] 8 req/s  (200 requests over 25s)...
+  → sent=200  deprioritised=0  blocked=0  detected=0  (0.0%)
+
+  [Step 3/5] 11 req/s  (275 requests over 25s)...
+  → sent=275  deprioritised=0  blocked=274  detected=274  (99.6%)
+
+  [Step 4/5] 14 req/s  (350 requests over 25s)...
+  → sent=350  deprioritised=0  blocked=65  detected=65  (18.6%)
+
+  [Step 5/5] 17 req/s  (425 requests over 25s)...
+  → sent=425  deprioritised=0  blocked=413  detected=413  (97.2%)
+
+─────────────────────── RAMP — Summary ───────────────────────
+  Total requests : 1375
+  Allowed        : 611  (44.4%)
+  Deprioritised  : 0  (0.0%)
+  Blocked        : 752  (54.7%)
+
+  Detection rate : 54.7%
+  Verdict        : ramp detected — anomaly baseline did not fully adapt
+
+  IDMS detection log: 16 events for 192.168.100.60
+    deprioritise         : 16
+
+Results saved to: results\attack_ramp_20260405_123216.csv  (1375 rows)
+──────────────────────────────────────────────────────────────
+  Finished : 12:34:29
+  Total requests recorded : 1375
+
+  [Direct LB mode] Bypassing IDMS — sending requests directly to http://localhost:5000
+Skipping IDMS health check, auth tests, and self-unblock.
+
+=== Load Balancing Algorithm Comparison (via IDMS) ===
+
+Setting algorithm: round_robin...
+
+==================== round_robin — mixed workload ====================
+Starting 150 requests (mixed tasks)...
+
+Request ID | Task Type       | Server          | Load | Time (Queue)
+---------------------------------------------------------------------------
+Request   3 | multiplication  | Server: 4571ea10b43d    | Load:  1 | Time: 0.17s (Queue: 0.02s)
+Request   1 | db_find_users   | Server: e59b86632389    | Load:  1 | Time: 0.27s (Queue: 0.02s)
+Request   4 | multiplication  | Server: 9f05d12fd459    | Load:  1 | Time: 0.17s (Queue: 0.02s)
+Request   2 | db_aggregate    | Server: 6a3625815f39    | Load:  1 | Time: 0.32s (Queue: 0.02s)
+Request   5 | multiplication  | Server: 6a3625815f39    | Load:  2 | Time: 0.25s (Queue: 0.03s)
+Request   7 | find_vowels     | Server: 9f05d12fd459    | Load:  2 | Time: 0.21s (Queue: 0.02s)
+Request   6 | db_aggregate    | Server: 4571ea10b43d    | Load:  1 | Time: 0.33s (Queue: 0.02s)
+Request   8 | db_find_users   | Server: e59b86632389    | Load:  1 | Time: 0.28s (Queue: 0.03s)
+Request   9 | db_create_user  | Server: 6a3625815f39    | Load:  2 | Time: 0.32s (Queue: 0.02s)
+Request  11 | multiplication  | Server: e59b86632389    | Load:  2 | Time: 0.25s (Queue: 0.02s)
+Request  13 | string_length   | Server: 4571ea10b43d    | Load:  1 | Time: 0.15s (Queue: 0.03s)
+Request  10 | db_find_users   | Server: 9f05d12fd459    | Load:  2 | Time: 0.40s (Queue: 0.02s)
+Request  16 | find_vowels     | Server: 4571ea10b43d    | Load:  1 | Time: 0.17s (Queue: 0.04s)
+Request  12 | sort_large_list | Server: 6a3625815f39    | Load:  2 | Time: 0.49s (Queue: 0.03s)
+Request  14 | sort_large_list | Server: 9f05d12fd459    | Load:  2 | Time: 0.47s (Queue: 0.02s)
+Request  15 | sort_large_list | Server: 6a3625815f39    | Load:  2 | Time: 0.49s (Queue: 0.03s)
+Request  18 | sort_large_list | Server: e59b86632389    | Load:  1 | Time: 0.33s (Queue: 0.03s)
+Request  21 | multiplication  | Server: e59b86632389    | Load:  2 | Time: 0.26s (Queue: 0.03s)
+Request  17 | db_create_user  | Server: 9f05d12fd459    | Load:  3 | Time: 0.48s (Queue: 0.03s)
+Request  22 | addition        | Server: 6a3625815f39    | Load:  3 | Time: 0.24s (Queue: 0.01s)
+Request  23 | db_find_users   | Server: 4571ea10b43d    | Load:  1 | Time: 0.29s (Queue: 0.04s)
+Request  20 | db_find_users   | Server: 9f05d12fd459    | Load:  3 | Time: 0.57s (Queue: 0.01s)
+Request  28 | find_vowels     | Server: e59b86632389    | Load:  2 | Time: 0.22s (Queue: 0.02s)
+Request  19 | db_aggregate    | Server: 6a3625815f39    | Load:  3 | Time: 0.69s (Queue: 0.02s)
+Request  25 | db_create_user  | Server: 6a3625815f39    | Load:  3 | Time: 0.47s (Queue: 0.01s)
+Request  29 | string_length   | Server: 6a3625815f39    | Load:  3 | Time: 0.30s (Queue: 0.03s)
+Request  26 | sort_large_list | Server: 4571ea10b43d    | Load:  2 | Time: 0.46s (Queue: 0.01s)
+Request  24 | db_aggregate    | Server: e59b86632389    | Load:  3 | Time: 0.70s (Queue: 0.02s)
+Request  27 | db_find_users   | Server: 9f05d12fd459    | Load:  3 | Time: 0.58s (Queue: 0.01s)
+Request  30 | db_aggregate    | Server: 4571ea10b43d    | Load:  2 | Time: 0.47s (Queue: 0.02s)
+Request  34 | string_length   | Server: 9f05d12fd459    | Load:  3 | Time: 0.29s (Queue: 0.02s)
+Request  36 | find_vowels     | Server: 6a3625815f39    | Load:  2 | Time: 0.22s (Queue: 0.02s)
+Request  31 | db_find_users   | Server: e59b86632389    | Load:  3 | Time: 0.59s (Queue: 0.02s)
+Request  37 | multiplication  | Server: 9f05d12fd459    | Load:  3 | Time: 0.37s (Queue: 0.04s)
+Request  41 | multiplication  | Server: 9f05d12fd459    | Load:  2 | Time: 0.24s (Queue: 0.02s)
+Request  40 | string_length   | Server: 4571ea10b43d    | Load:  3 | Time: 0.30s (Queue: 0.03s)
+Request  33 | sort_large_list | Server: 4571ea10b43d    | Load:  3 | Time: 0.69s (Queue: 0.02s)
+Request  38 | factorial       | Server: e59b86632389    | Load:  3 | Time: 0.47s (Queue: 0.02s)
+Request  35 | sort_large_list | Server: e59b86632389    | Load:  3 | Time: 0.69s (Queue: 0.01s)
+Request  44 | multiplication  | Server: 9f05d12fd459    | Load:  2 | Time: 0.24s (Queue: 0.01s)
+Request  39 | sort_large_list | Server: 6a3625815f39    | Load:  3 | Time: 0.70s (Queue: 0.03s)
+Request  49 | string_length   | Server: e59b86632389    | Load:  3 | Time: 0.29s (Queue: 0.02s)
+Request  51 | addition        | Server: 9f05d12fd459    | Load:  2 | Time: 0.19s (Queue: 0.03s)
+Request  46 | find_vowels     | Server: 6a3625815f39    | Load:  4 | Time: 0.45s (Queue: 0.01s)
+Request  32 | db_generate_data | Server: 6a3625815f39    | Load:  4 | Time: 1.21s (Queue: 0.02s)
+Request  42 | factorial       | Server: e59b86632389    | Load:  4 | Time: 0.71s (Queue: 0.03s)
+Request  47 | sort_large_list | Server: 4571ea10b43d    | Load:  2 | Time: 0.47s (Queue: 0.02s)
+Request  43 | sort_large_list | Server: 6a3625815f39    | Load:  3 | Time: 0.69s (Queue: 0.02s)
+Request  48 | db_aggregate    | Server: 9f05d12fd459    | Load:  2 | Time: 0.47s (Queue: 0.01s)
+Request  57 | addition        | Server: 4571ea10b43d    | Load:  2 | Time: 0.17s (Queue: 0.01s)
+Request  55 | factorial       | Server: 9f05d12fd459    | Load:  2 | Time: 0.32s (Queue: 0.01s)
+Request  54 | db_find_users   | Server: 4571ea10b43d    | Load:  2 | Time: 0.39s (Queue: 0.01s)
+Request  56 | string_length   | Server: 6a3625815f39    | Load:  4 | Time: 0.42s (Queue: 0.02s)
+Request  58 | factorial       | Server: 9f05d12fd459    | Load:  2 | Time: 0.32s (Queue: 0.02s)
+Request  45 | db_aggregate    | Server: e59b86632389    | Load:  4 | Time: 1.04s (Queue: 0.02s)
+Request  61 | find_vowels     | Server: 4571ea10b43d    | Load:  2 | Time: 0.22s (Queue: 0.02s)
+Request  52 | db_create_user  | Server: e59b86632389    | Load:  4 | Time: 0.71s (Queue: 0.03s)
+Request  62 | string_length   | Server: 9f05d12fd459    | Load:  2 | Time: 0.22s (Queue: 0.04s)
+Request  59 | find_vowels     | Server: e59b86632389    | Load:  4 | Time: 0.47s (Queue: 0.03s)
+Request  60 | multiplication  | Server: 6a3625815f39    | Load:  4 | Time: 0.53s (Queue: 0.02s)
+Request  68 | multiplication  | Server: 4571ea10b43d    | Load:  2 | Time: 0.24s (Queue: 0.01s)
+Request  70 | addition        | Server: e59b86632389    | Load:  2 | Time: 0.17s (Queue: 0.02s)
+Request  64 | db_aggregate    | Server: 4571ea10b43d    | Load:  2 | Time: 0.48s (Queue: 0.02s)
+Request  69 | multiplication  | Server: 9f05d12fd459    | Load:  2 | Time: 0.24s (Queue: 0.01s)
+Request  50 | db_find_users   | Server: 6a3625815f39    | Load:  5 | Time: 1.31s (Queue: 0.04s)
+Request  65 | db_generate_data | Server: 9f05d12fd459    | Load:  2 | Time: 0.54s (Queue: 0.01s)
+Request  73 | string_length   | Server: e59b86632389    | Load:  2 | Time: 0.22s (Queue: 0.04s)
+Request  67 | addition        | Server: 6a3625815f39    | Load:  5 | Time: 0.54s (Queue: 0.03s)
+Request  66 | db_find_users   | Server: e59b86632389    | Load:  3 | Time: 0.60s (Queue: 0.03s)
+Request  63 | multiplication  | Server: 6a3625815f39    | Load:  5 | Time: 0.80s (Queue: 0.04s)
+Request  72 | multiplication  | Server: 9f05d12fd459    | Load:  3 | Time: 0.36s (Queue: 0.02s)
+Request  75 | multiplication  | Server: 4571ea10b43d    | Load:  2 | Time: 0.25s (Queue: 0.02s)
+Request  53 | db_aggregate    | Server: 6a3625815f39    | Load:  5 | Time: 1.54s (Queue: 0.01s)
+Request  76 | db_find_users   | Server: 9f05d12fd459    | Load:  2 | Time: 0.39s (Queue: 0.01s)
+Request  80 | string_length   | Server: e59b86632389    | Load:  2 | Time: 0.21s (Queue: 0.03s)
+Request  78 | db_create_user  | Server: 4571ea10b43d    | Load:  2 | Time: 0.32s (Queue: 0.02s)
+Request  71 | multiplication  | Server: 6a3625815f39    | Load:  5 | Time: 0.78s (Queue: 0.02s)
+Request  79 | db_find_users   | Server: 9f05d12fd459    | Load:  2 | Time: 0.39s (Queue: 0.01s)
+Request  77 | db_generate_data | Server: e59b86632389    | Load:  2 | Time: 0.56s (Queue: 0.04s)
+Request  84 | multiplication  | Server: e59b86632389    | Load:  2 | Time: 0.24s (Queue: 0.02s)
+Request  82 | db_find_users   | Server: 4571ea10b43d    | Load:  2 | Time: 0.40s (Queue: 0.03s)
+Request  88 | find_vowels     | Server: e59b86632389    | Load:  2 | Time: 0.22s (Queue: 0.02s)
+Request  83 | factorial       | Server: 9f05d12fd459    | Load:  3 | Time: 0.47s (Queue: 0.02s)
+Request  90 | addition        | Server: 4571ea10b43d    | Load:  2 | Time: 0.17s (Queue: 0.02s)
+Request  87 | db_find_users   | Server: 9f05d12fd459    | Load:  2 | Time: 0.40s (Queue: 0.02s)
+Request  86 | sort_large_list | Server: 4571ea10b43d    | Load:  2 | Time: 0.48s (Queue: 0.03s)
+Request  91 | factorial       | Server: e59b86632389    | Load:  2 | Time: 0.34s (Queue: 0.04s)
+Request  93 | multiplication  | Server: 4571ea10b43d    | Load:  2 | Time: 0.26s (Queue: 0.03s)
+Request  89 | multiplication  | Server: 6a3625815f39    | Load:  4 | Time: 0.54s (Queue: 0.04s)
+Request  81 | factorial       | Server: 6a3625815f39    | Load:  5 | Time: 1.03s (Queue: 0.01s)
+Request  94 | multiplication  | Server: 9f05d12fd459    | Load:  3 | Time: 0.37s (Queue: 0.03s)
+Request  97 | multiplication  | Server: 9f05d12fd459    | Load:  2 | Time: 0.25s (Queue: 0.03s)
+Request  95 | db_find_users   | Server: e59b86632389    | Load:  2 | Time: 0.39s (Queue: 0.01s)
+Request 100 | multiplication  | Server: 4571ea10b43d    | Load:  1 | Time: 0.17s (Queue: 0.02s)
+Request 103 | string_length   | Server: 4571ea10b43d    | Load:  1 | Time: 0.16s (Queue: 0.04s)
+Request  98 | sort_large_list | Server: e59b86632389    | Load:  2 | Time: 0.48s (Queue: 0.03s)
+Request  85 | db_find_users   | Server: 6a3625815f39    | Load:  5 | Time: 1.29s (Queue: 0.02s)
+Request 104 | db_find_users   | Server: 9f05d12fd459    | Load:  2 | Time: 0.39s (Queue: 0.01s)
+Request 107 | sort_large_list | Server: 4571ea10b43d    | Load:  1 | Time: 0.33s (Queue: 0.03s)
+Request 108 | find_vowels     | Server: 9f05d12fd459    | Load:  3 | Time: 0.32s (Queue: 0.03s)
+Request 102 | sort_large_list | Server: e59b86632389    | Load:  3 | Time: 0.69s (Queue: 0.01s)
+Request 101 | db_generate_data | Server: 9f05d12fd459    | Load:  3 | Time: 0.80s (Queue: 0.01s)
+Request 111 | db_create_user  | Server: 4571ea10b43d    | Load:  2 | Time: 0.32s (Queue: 0.01s)
+Request 118 | db_create_user  | Failed: Server Overloaded
+Request 105 | sort_large_list | Server: e59b86632389    | Load:  3 | Time: 0.70s (Queue: 0.02s)
+Request 115 | multiplication  | Server: 4571ea10b43d    | Load:  2 | Time: 0.27s (Queue: 0.04s)
+Request 109 | db_find_users   | Server: e59b86632389    | Load:  3 | Time: 0.59s (Queue: 0.03s)
+Request  92 | sort_large_list | Server: 6a3625815f39    | Load:  5 | Time: 1.54s (Queue: 0.02s)
+Request 119 | find_vowels     | Server: 4571ea10b43d    | Load:  2 | Time: 0.22s (Queue: 0.03s)
+Request 112 | db_aggregate    | Server: 9f05d12fd459    | Load:  3 | Time: 0.70s (Queue: 0.02s)
+Request 120 | find_vowels     | Server: 9f05d12fd459    | Load:  3 | Time: 0.32s (Queue: 0.03s)
+Request 126 | find_vowels     | Failed: Server Overloaded
+Request 116 | db_aggregate    | Server: 9f05d12fd459    | Load:  3 | Time: 0.70s (Queue: 0.02s)
+Request 130 | string_length   | Failed: Server Overloaded
+Request 124 | addition        | Server: 9f05d12fd459    | Load:  4 | Time: 0.37s (Queue: 0.03s)
+Request 123 | db_generate_data | Server: 4571ea10b43d    | Load:  2 | Time: 0.55s (Queue: 0.03s)
+Request 134 | factorial       | Failed: Server Overloaded
+Request 121 | sort_large_list | Server: e59b86632389    | Load:  3 | Time: 0.69s (Queue: 0.02s)
+Request 125 | multiplication  | Server: e59b86632389    | Load:  4 | Time: 0.53s (Queue: 0.03s)
+Request 127 | sort_large_list | Server: 4571ea10b43d    | Load:  2 | Time: 0.48s (Queue: 0.03s)
+Request 113 | db_generate_data | Server: e59b86632389    | Load:  4 | Time: 1.21s (Queue: 0.02s)
+Request 138 | db_generate_data | Failed: Server Overloaded
+Request 117 | db_generate_data | Server: e59b86632389    | Load:  4 | Time: 1.20s (Queue: 0.02s)
+Request 135 | string_length   | Server: 4571ea10b43d    | Load:  3 | Time: 0.29s (Queue: 0.02s)
+Request 132 | sort_large_list | Server: 9f05d12fd459    | Load:  2 | Time: 0.48s (Queue: 0.03s)
+Request 128 | sort_large_list | Server: 9f05d12fd459    | Load:  3 | Time: 0.70s (Queue: 0.02s)
+Request 129 | find_vowels     | Server: e59b86632389    | Load:  5 | Time: 0.69s (Queue: 0.03s)
+Request 142 | db_create_user  | Failed: Server Overloaded
+Request 131 | db_aggregate    | Server: 4571ea10b43d    | Load:  3 | Time: 0.71s (Queue: 0.03s)
+Request 139 | multiplication  | Server: 4571ea10b43d    | Load:  3 | Time: 0.36s (Queue: 0.02s)
+Request 146 | find_vowels     | Failed: Server Overloaded
+Request  74 | db_aggregate    | Server: 6a3625815f39    | Load:  6 | Time: 3.83s (Queue: 0.03s)
+Request 136 | db_aggregate    | Server: 9f05d12fd459    | Load:  3 | Time: 0.72s (Queue: 0.04s)
+Request 140 | multiplication  | Server: 9f05d12fd459    | Load:  4 | Time: 0.51s (Queue: 0.00s)
+Request 137 | db_create_user  | Server: e59b86632389    | Load:  4 | Time: 0.70s (Queue: 0.03s)
+Request 143 | factorial       | Server: 4571ea10b43d    | Load:  3 | Time: 0.47s (Queue: 0.02s)
+Request 145 | addition        | Server: e59b86632389    | Load:  4 | Time: 0.37s (Queue: 0.04s)
+Request 141 | db_create_user  | Server: e59b86632389    | Load:  4 | Time: 0.69s (Queue: 0.02s)
+Request 147 | db_find_users   | Server: 4571ea10b43d    | Load:  2 | Time: 0.41s (Queue: 0.03s)
+Request  96 | factorial       | Server: 6a3625815f39    | Load:  6 | Time: 3.06s (Queue: 0.02s)
+Request 150 | db_create_user  | Server: 4571ea10b43d    | Load:  3 | Time: 0.48s (Queue: 0.02s)
+Request 144 | db_generate_data | Server: 9f05d12fd459    | Load:  3 | Time: 0.82s (Queue: 0.03s)
+Request 148 | db_create_user  | Server: 9f05d12fd459    | Load:  4 | Time: 0.69s (Queue: 0.02s)
+Request  99 | string_length   | Server: 6a3625815f39    | Load:  7 | Time: 3.66s (Queue: 0.02s)
+Request 133 | string_length   | Server: e59b86632389    | Load:  6 | Time: 2.47s (Queue: 0.03s)
+Request 110 | find_vowels     | Server: 6a3625815f39    | Load:  7 | Time: 3.79s (Queue: 0.02s)
+Request 106 | multiplication  | Server: 6a3625815f39    | Load:  7 | Time: 4.03s (Queue: 0.04s)
+Request 114 | string_length   | Server: 6a3625815f39    | Load:  8 | Time: 5.51s (Queue: 0.04s)
+Request 149 | db_find_users   | Server: 6a3625815f39    | Load:  7 | Time: 5.16s (Queue: 0.02s)
+Request 122 | db_find_users   | Server: 6a3625815f39    | Load:  8 | Time: 7.72s (Queue: 0.02s)
+
+==================== round_robin — mixed workload Summary ====================
+Total Duration: 13.66s
+Requests per second: 11.0
+
+Request Statistics:
+  Total Requests: 150
+  Successful: 143
+  Failed: 7
+  Success Rate: 95.3%
+
+Response Time Statistics:
+  Average: 0.72s
+  Median: 0.47s
+  Min: 0.15s
+  Max: 7.72s
+  Std Dev: 1.05s
+
+Server Distribution and Performance:
+  4571ea10b43d:
+    Requests: 35 (24.5%)
+    Avg Response: 0.34s
+    Min/Max: 0.15s / 0.71s
+  6a3625815f39:
+    Requests: 33 (23.1%)
+    Avg Response: 1.63s
+    Min/Max: 0.22s / 7.72s
+  9f05d12fd459:
+    Requests: 38 (26.6%)
+    Avg Response: 0.43s
+    Min/Max: 0.17s / 0.82s
+  e59b86632389:
+    Requests: 37 (25.9%)
+    Avg Response: 0.57s
+    Min/Max: 0.17s / 2.47s
+
+Task Type Performance:
+  addition       :   8 requests, avg=0.28s, max=0.54s
+  db_aggregate   :  14 requests, avg=0.91s, max=3.83s
+  db_create_user :  10 requests, avg=0.52s, max=0.71s
+  db_find_users  :  21 requests, avg=1.09s, max=7.72s
+  db_generate_data:   8 requests, avg=0.86s, max=1.21s
+  factorial      :   9 requests, avg=0.80s, max=3.06s
+  find_vowels    :  13 requests, avg=0.58s, max=3.79s
+  multiplication :  26 requests, avg=0.49s, max=4.03s
+  sort_large_list:  20 requests, avg=0.60s, max=1.54s
+  string_length  :  14 requests, avg=1.03s, max=5.51s
+
+Error Distribution:
+  Server Overloaded: 7 occurrences
+============================================================
+
+Setting algorithm: source_hashing...
+
+==================== source_hashing — mixed workload ====================
+Starting 150 requests (mixed tasks)...
+
+Request ID | Task Type       | Server          | Load | Time (Queue)
+---------------------------------------------------------------------------
+Request   2 | find_vowels     | Server: 4571ea10b43d    | Load:  1 | Time: 0.16s (Queue: 0.03s)
+Request   1 | db_find_users   | Server: 6a3625815f39    | Load:  1 | Time: 0.27s (Queue: 0.02s)
+Request   6 | multiplication  | Server: 9f05d12fd459    | Load:  1 | Time: 0.17s (Queue: 0.02s)
+Request   3 | db_create_user  | Server: e59b86632389    | Load:  2 | Time: 0.34s (Queue: 0.03s)
+Request   9 | string_length   | Server: 9f05d12fd459    | Load:  2 | Time: 0.20s (Queue: 0.02s)
+Request   4 | sort_large_list | Server: 6a3625815f39    | Load:  2 | Time: 0.48s (Queue: 0.03s)
+Request  11 | addition        | Server: 9f05d12fd459    | Load:  2 | Time: 0.16s (Queue: 0.01s)
+Request  12 | find_vowels     | Server: 4571ea10b43d    | Load:  1 | Time: 0.16s (Queue: 0.03s)
+Request   5 | db_find_users   | Server: 6a3625815f39    | Load:  3 | Time: 0.59s (Queue: 0.02s)
+Request   8 | db_create_user  | Server: e59b86632389    | Load:  3 | Time: 0.48s (Queue: 0.02s)
+Request  13 | multiplication  | Server: 9f05d12fd459    | Load:  2 | Time: 0.25s (Queue: 0.03s)
+Request  15 | find_vowels     | Server: 4571ea10b43d    | Load:  1 | Time: 0.16s (Queue: 0.03s)
+Request  16 | addition        | Server: e59b86632389    | Load:  2 | Time: 0.17s (Queue: 0.02s)
+Request  17 | addition        | Server: 9f05d12fd459    | Load:  2 | Time: 0.16s (Queue: 0.01s)
+Request   7 | db_aggregate    | Server: 6a3625815f39    | Load:  3 | Time: 0.71s (Queue: 0.03s)
+Request  10 | db_create_user  | Server: 6a3625815f39    | Load:  4 | Time: 0.69s (Queue: 0.02s)
+Request  22 | string_length   | Server: 9f05d12fd459    | Load:  1 | Time: 0.13s (Queue: 0.01s)
+Request  24 | addition        | Server: 4571ea10b43d    | Load:  1 | Time: 0.11s (Queue: 0.01s)
+Request  25 | multiplication  | Server: 4571ea10b43d    | Load:  2 | Time: 0.24s (Queue: 0.02s)
+Request  27 | string_length   | Server: 9f05d12fd459    | Load:  1 | Time: 0.16s (Queue: 0.04s)
+Request  30 | sort_large_list | Failed: Server Overloaded
+Request  14 | db_find_users   | Server: 6a3625815f39    | Load:  4 | Time: 0.87s (Queue: 0.03s)
+Request  29 | string_length   | Server: e59b86632389    | Load:  2 | Time: 0.20s (Queue: 0.02s)
+Request  19 | multiplication  | Server: 6a3625815f39    | Load:  5 | Time: 0.79s (Queue: 0.03s)
+Request  32 | addition        | Server: 4571ea10b43d    | Load:  1 | Time: 0.12s (Queue: 0.02s)
+Request  36 | db_find_users   | Failed: Server Overloaded
+Request  34 | string_length   | Server: 9f05d12fd459    | Load:  1 | Time: 0.15s (Queue: 0.03s)
+Request  37 | db_find_users   | Failed: Server Overloaded
+Request  33 | find_vowels     | Server: 4571ea10b43d    | Load:  2 | Time: 0.22s (Queue: 0.03s)
+Request  18 | db_aggregate    | Server: 6a3625815f39    | Load:  4 | Time: 1.03s (Queue: 0.01s)
+Request  40 | db_aggregate    | Failed: Server Overloaded
+Request  38 | find_vowels     | Server: 4571ea10b43d    | Load:  1 | Time: 0.15s (Queue: 0.02s)
+Request  41 | db_find_users   | Failed: Server Overloaded
+Request  43 | db_find_users   | Failed: Server Overloaded
+Request  42 | find_vowels     | Server: 4571ea10b43d    | Load:  1 | Time: 0.15s (Queue: 0.02s)
+Request  45 | db_find_users   | Failed: Server Overloaded
+Request  46 | db_find_users   | Failed: Server Overloaded
+Request  44 | multiplication  | Server: 9f05d12fd459    | Load:  1 | Time: 0.17s (Queue: 0.01s)
+Request  48 | db_find_users   | Failed: Server Overloaded
+Request  47 | addition        | Server: e59b86632389    | Load:  2 | Time: 0.17s (Queue: 0.02s)
+Request  49 | find_vowels     | Server: 4571ea10b43d    | Load:  1 | Time: 0.15s (Queue: 0.02s)
+Request  52 | db_aggregate    | Failed: Server Overloaded
+Request  51 | string_length   | Server: 9f05d12fd459    | Load:  1 | Time: 0.13s (Queue: 0.00s)
+Request  54 | multiplication  | Failed: Server Overloaded
+Request  55 | db_find_users   | Failed: Server Overloaded
+Request  50 | db_create_user  | Server: 4571ea10b43d    | Load:  2 | Time: 0.32s (Queue: 0.02s)
+Request  56 | sort_large_list | Failed: Server Overloaded
+Request  53 | string_length   | Server: 9f05d12fd459    | Load:  2 | Time: 0.20s (Queue: 0.02s)
+Request  57 | db_aggregate    | Failed: Server Overloaded
+Request  58 | db_find_users   | Failed: Server Overloaded
+Request  59 | db_find_users   | Failed: Server Overloaded
+Request  60 | string_length   | Server: 9f05d12fd459    | Load:  1 | Time: 0.13s (Queue: 0.01s)
+Request  63 | multiplication  | Failed: Server Overloaded
+Request  61 | find_vowels     | Server: 4571ea10b43d    | Load:  1 | Time: 0.17s (Queue: 0.04s)
+Request  64 | addition        | Failed: Server Overloaded
+Request  62 | find_vowels     | Server: 4571ea10b43d    | Load:  2 | Time: 0.23s (Queue: 0.03s)
+Request  66 | db_find_users   | Failed: Server Overloaded
+Request  67 | sort_large_list | Failed: Server Overloaded
+Request  68 | db_find_users   | Failed: Server Overloaded
+Request  70 | db_aggregate    | Failed: Server Overloaded
+Request  69 | addition        | Server: e59b86632389    | Load:  2 | Time: 0.16s (Queue: 0.01s)
+Request  65 | db_generate_data | Server: 9f05d12fd459    | Load:  1 | Time: 0.37s (Queue: 0.02s)
+Request  73 | db_find_users   | Failed: Server Overloaded
+Request  71 | string_length   | Server: 9f05d12fd459    | Load:  2 | Time: 0.20s (Queue: 0.02s)
+Request  75 | db_find_users   | Failed: Server Overloaded
+Request  72 | multiplication  | Server: e59b86632389    | Load:  2 | Time: 0.24s (Queue: 0.01s)
+Request  76 | find_vowels     | Server: 4571ea10b43d    | Load:  1 | Time: 0.15s (Queue: 0.02s)
+Request  80 | db_find_users   | Failed: Server Overloaded
+Request  74 | multiplication  | Server: e59b86632389    | Load:  3 | Time: 0.37s (Queue: 0.03s)
+Request  81 | db_aggregate    | Failed: Server Overloaded
+Request  79 | find_vowels     | Server: 4571ea10b43d    | Load:  1 | Time: 0.17s (Queue: 0.03s)
+Request  78 | factorial       | Server: 9f05d12fd459    | Load:  1 | Time: 0.23s (Queue: 0.03s)
+Request  77 | string_length   | Server: e59b86632389    | Load:  3 | Time: 0.29s (Queue: 0.02s)
+Request  85 | db_create_user  | Failed: Server Overloaded
+Request  83 | find_vowels     | Server: 4571ea10b43d    | Load:  1 | Time: 0.14s (Queue: 0.01s)
+Request  86 | db_find_users   | Failed: Server Overloaded
+Request  84 | string_length   | Server: 9f05d12fd459    | Load:  1 | Time: 0.14s (Queue: 0.02s)
+Request  20 | db_find_users   | Server: 6a3625815f39    | Load:  6 | Time: 3.45s (Queue: 0.03s)
+Request  21 | db_find_users   | Server: 6a3625815f39    | Load:  6 | Time: 3.45s (Queue: 0.03s)
+Request  87 | db_create_user  | Server: 9f05d12fd459    | Load:  1 | Time: 0.22s (Queue: 0.01s)
+Request  88 | multiplication  | Server: 4571ea10b43d    | Load:  1 | Time: 0.17s (Queue: 0.02s)
+Request  82 | db_create_user  | Server: e59b86632389    | Load:  3 | Time: 0.48s (Queue: 0.03s)
+Request  92 | db_aggregate    | Failed: Server Overloaded
+Request  91 | string_length   | Server: 9f05d12fd459    | Load:  1 | Time: 0.13s (Queue: 0.01s)
+Request  94 | multiplication  | Failed: Server Overloaded
+Request  93 | find_vowels     | Server: 4571ea10b43d    | Load:  1 | Time: 0.14s (Queue: 0.01s)
+Request  95 | factorial       | Server: 9f05d12fd459    | Load:  1 | Time: 0.22s (Queue: 0.01s)
+Request  99 | multiplication  | Failed: Server Overloaded
+Request  96 | multiplication  | Server: 4571ea10b43d    | Load:  1 | Time: 0.18s (Queue: 0.03s)
+Request  97 | addition        | Server: 4571ea10b43d    | Load:  2 | Time: 0.18s (Queue: 0.03s)
+Request 100 | db_aggregate    | Failed: Server Overloaded
+Request 101 | db_aggregate    | Failed: Server Overloaded
+Request  98 | string_length   | Server: 9f05d12fd459    | Load:  2 | Time: 0.20s (Queue: 0.02s)
+Request 104 | db_find_users   | Failed: Server Overloaded
+Request 105 | db_aggregate    | Failed: Server Overloaded
+Request 106 | addition        | Failed: Server Overloaded
+Request 103 | db_create_user  | Server: 4571ea10b43d    | Load:  1 | Time: 0.21s (Queue: 0.01s)
+Request 108 | sort_large_list | Failed: Server Overloaded
+Request 102 | db_generate_data | Server: 9f05d12fd459    | Load:  1 | Time: 0.38s (Queue: 0.03s)
+Request 109 | db_find_users   | Failed: Server Overloaded
+Request 110 | db_create_user  | Failed: Server Overloaded
+Request 107 | multiplication  | Server: e59b86632389    | Load:  1 | Time: 0.18s (Queue: 0.02s)
+Request 111 | multiplication  | Server: 4571ea10b43d    | Load:  1 | Time: 0.18s (Queue: 0.03s)
+Request 112 | factorial       | Server: 9f05d12fd459    | Load:  1 | Time: 0.23s (Queue: 0.03s)
+Request 113 | find_vowels     | Server: 4571ea10b43d    | Load:  2 | Time: 0.22s (Queue: 0.02s)
+Request 115 | find_vowels     | Server: 4571ea10b43d    | Load:  2 | Time: 0.23s (Queue: 0.03s)
+Request 119 | db_find_users   | Failed: Server Overloaded
+Request 120 | multiplication  | Failed: Server Overloaded
+Request 114 | factorial       | Server: 9f05d12fd459    | Load:  2 | Time: 0.33s (Queue: 0.03s)
+Request 117 | multiplication  | Server: e59b86632389    | Load:  1 | Time: 0.18s (Queue: 0.03s)
+Request 116 | multiplication  | Server: 9f05d12fd459    | Load:  2 | Time: 0.26s (Queue: 0.04s)
+Request 121 | addition        | Failed: Server Overloaded
+Request 118 | find_vowels     | Server: 4571ea10b43d    | Load:  2 | Time: 0.21s (Queue: 0.02s)
+Request 122 | db_find_users   | Failed: Server Overloaded
+Request 125 | sort_large_list | Failed: Server Overloaded
+Request 126 | db_find_users   | Failed: Server Overloaded
+Request 124 | addition        | Server: 4571ea10b43d    | Load:  2 | Time: 0.17s (Queue: 0.02s)
+Request 123 | factorial       | Server: 4571ea10b43d    | Load:  1 | Time: 0.23s (Queue: 0.02s)
+Request 127 | db_aggregate    | Failed: Server Overloaded
+Request 128 | db_aggregate    | Failed: Server Overloaded
+Request 129 | db_find_users   | Failed: Server Overloaded
+Request 131 | multiplication  | Failed: Server Overloaded
+Request  23 | sort_large_list | Server: 6a3625815f39    | Load:  7 | Time: 5.72s (Queue: 0.02s)
+Request 133 | find_vowels     | Server: 4571ea10b43d    | Load:  1 | Time: 0.14s (Queue: 0.01s)
+Request 132 | string_length   | Server: 9f05d12fd459    | Load:  2 | Time: 0.21s (Queue: 0.03s)
+Request  26 | db_aggregate    | Server: 6a3625815f39    | Load:  7 | Time: 5.73s (Queue: 0.03s)
+Request 137 | db_find_users   | Failed: Server Overloaded
+Request 130 | db_generate_data | Server: 9f05d12fd459    | Load:  1 | Time: 0.38s (Queue: 0.02s)
+Request 136 | find_vowels     | Server: 4571ea10b43d    | Load:  1 | Time: 0.15s (Queue: 0.02s)
+Request 134 | db_create_user  | Server: e59b86632389    | Load:  2 | Time: 0.31s (Queue: 0.01s)
+Request 141 | db_aggregate    | Failed: Server Overloaded
+Request 138 | find_vowels     | Server: 4571ea10b43d    | Load:  2 | Time: 0.22s (Queue: 0.02s)
+Request 139 | find_vowels     | Server: 4571ea10b43d    | Load:  2 | Time: 0.21s (Queue: 0.01s)
+Request 144 | sort_large_list | Failed: Server Overloaded
+Request 145 | sort_large_list | Failed: Server Overloaded
+Request 142 | string_length   | Server: e59b86632389    | Load:  2 | Time: 0.20s (Queue: 0.02s)
+Request 146 | find_vowels     | Server: 4571ea10b43d    | Load:  1 | Time: 0.16s (Queue: 0.03s)
+Request 147 | db_create_user  | Server: 9f05d12fd459    | Load:  1 | Time: 0.20s (Queue: 0.00s)
+Request 148 | addition        | Server: 9f05d12fd459    | Load:  2 | Time: 0.17s (Queue: 0.02s)
+Request 143 | db_create_user  | Server: e59b86632389    | Load:  3 | Time: 0.48s (Queue: 0.02s)
+Request 150 | find_vowels     | Server: 4571ea10b43d    | Load:  1 | Time: 0.14s (Queue: 0.01s)
+Request 149 | db_generate_data | Server: 9f05d12fd459    | Load:  3 | Time: 0.81s (Queue: 0.02s)
+Request  39 | db_find_users   | Server: 6a3625815f39    | Load:  8 | Time: 7.71s (Queue: 0.02s)
+Request  28 | db_aggregate    | Server: 6a3625815f39    | Load:  8 | Time: 8.57s (Queue: 0.01s)
+Request  31 | db_aggregate    | Server: 6a3625815f39    | Load:  8 | Time: 8.57s (Queue: 0.02s)
+Request  89 | sort_large_list | Server: 6a3625815f39    | Load:  7 | Time: 5.71s (Queue: 0.01s)
+Request  35 | sort_large_list | Server: 6a3625815f39    | Load:  8 | Time: 8.57s (Queue: 0.02s)
+Request  90 | db_find_users   | Server: 6a3625815f39    | Load:  8 | Time: 7.73s (Queue: 0.04s)
+Request 135 | db_find_users   | Server: 6a3625815f39    | Load:  8 | Time: 7.72s (Queue: 0.03s)
+Request 140 | sort_large_list | Server: 6a3625815f39    | Load:  8 | Time: 8.57s (Queue: 0.02s)
+
+==================== source_hashing — mixed workload Summary ====================
+Total Duration: 15.50s
+Requests per second: 9.7
+
+Request Statistics:
+  Total Requests: 150
+  Successful: 97
+  Failed: 53
+  Success Rate: 64.7%
+
+Response Time Statistics:
+  Average: 1.07s
+  Median: 0.21s
+  Min: 0.11s
+  Max: 8.57s
+  Std Dev: 2.26s
+
+Server Distribution and Performance:
+  4571ea10b43d:
+    Requests: 33 (34.0%)
+    Avg Response: 0.18s
+    Min/Max: 0.11s / 0.32s
+  6a3625815f39:
+    Requests: 20 (20.6%)
+    Avg Response: 4.35s
+    Min/Max: 0.27s / 8.57s
+  9f05d12fd459:
+    Requests: 29 (29.9%)
+    Avg Response: 0.23s
+    Min/Max: 0.13s / 0.81s
+  e59b86632389:
+    Requests: 15 (15.5%)
+    Avg Response: 0.28s
+    Min/Max: 0.16s / 0.48s
+
+Task Type Performance:
+  addition       :  10 requests, avg=0.16s, max=0.18s
+  db_aggregate   :   5 requests, avg=4.92s, max=8.57s
+  db_create_user :  10 requests, avg=0.37s, max=0.69s
+  db_find_users  :   8 requests, avg=3.97s, max=7.73s
+  db_generate_data:   4 requests, avg=0.49s, max=0.81s
+  factorial      :   5 requests, avg=0.25s, max=0.33s
+  find_vowels    :  22 requests, avg=0.17s, max=0.23s
+  multiplication :  13 requests, avg=0.26s, max=0.79s
+  sort_large_list:   5 requests, avg=5.81s, max=8.57s
+  string_length  :  15 requests, avg=0.18s, max=0.29s
+
+Error Distribution:
+  Server Overloaded: 53 occurrences
+============================================================
+
+Setting algorithm: least_loaded...
+
+==================== least_loaded — mixed workload ====================
+Starting 150 requests (mixed tasks)...
+
+Request ID | Task Type       | Server          | Load | Time (Queue)
+---------------------------------------------------------------------------
+Request   2 | addition        | Server: e59b86632389    | Load:  1 | Time: 0.13s (Queue: 0.03s)
+Request   1 | db_create_user  | Server: 9f05d12fd459    | Load:  1 | Time: 0.25s (Queue: 0.05s)
+Request   5 | find_vowels     | Server: e59b86632389    | Load:  1 | Time: 0.16s (Queue: 0.03s)
+Request   3 | db_aggregate    | Server: 6a3625815f39    | Load:  1 | Time: 0.37s (Queue: 0.07s)
+Request   7 | multiplication  | Server: 9f05d12fd459    | Load:  1 | Time: 0.18s (Queue: 0.03s)
+Request   4 | db_create_user  | Server: 6a3625815f39    | Load:  2 | Time: 0.34s (Queue: 0.04s)
+Request   9 | multiplication  | Server: 4571ea10b43d    | Load:  2 | Time: 0.26s (Queue: 0.04s)
+Request   6 | db_find_users   | Server: 4571ea10b43d    | Load:  2 | Time: 0.42s (Queue: 0.04s)
+Request   8 | db_aggregate    | Server: e59b86632389    | Load:  1 | Time: 0.34s (Queue: 0.04s)
+Request  14 | string_length   | Server: 4571ea10b43d    | Load:  1 | Time: 0.17s (Queue: 0.05s)
+Request  10 | db_generate_data | Server: 9f05d12fd459    | Load:  1 | Time: 0.40s (Queue: 0.05s)
+Request  16 | string_length   | Server: 4571ea10b43d    | Load:  2 | Time: 0.23s (Queue: 0.05s)
+Request  11 | sort_large_list | Server: 6a3625815f39    | Load:  2 | Time: 0.50s (Queue: 0.05s)
+Request  13 | db_find_users   | Server: e59b86632389    | Load:  2 | Time: 0.43s (Queue: 0.05s)
+Request  17 | string_length   | Server: 4571ea10b43d    | Load:  2 | Time: 0.23s (Queue: 0.05s)
+Request  12 | sort_large_list | Server: 9f05d12fd459    | Load:  2 | Time: 0.50s (Queue: 0.05s)
+Request  15 | factorial       | Server: e59b86632389    | Load:  2 | Time: 0.35s (Queue: 0.05s)
+Request  19 | addition        | Server: 6a3625815f39    | Load:  2 | Time: 0.21s (Queue: 0.06s)
+Request  21 | multiplication  | Server: 4571ea10b43d    | Load:  1 | Time: 0.18s (Queue: 0.03s)
+Request  18 | db_create_user  | Server: 9f05d12fd459    | Load:  2 | Time: 0.34s (Queue: 0.04s)
+Request  22 | addition        | Server: e59b86632389    | Load:  1 | Time: 0.15s (Queue: 0.05s)
+Request  25 | addition        | Server: 4571ea10b43d    | Load:  1 | Time: 0.14s (Queue: 0.04s)
+Request  23 | multiplication  | Server: 6a3625815f39    | Load:  2 | Time: 0.27s (Queue: 0.04s)
+Request  20 | db_aggregate    | Server: 6a3625815f39    | Load:  2 | Time: 0.48s (Queue: 0.03s)
+Request  27 | addition        | Server: 9f05d12fd459    | Load:  2 | Time: 0.19s (Queue: 0.04s)
+Request  26 | db_create_user  | Server: 9f05d12fd459    | Load:  1 | Time: 0.24s (Queue: 0.04s)
+Request  24 | db_find_users   | Server: e59b86632389    | Load:  2 | Time: 0.41s (Queue: 0.03s)
+Request  29 | find_vowels     | Server: 4571ea10b43d    | Load:  2 | Time: 0.24s (Queue: 0.04s)
+Request  30 | find_vowels     | Server: e59b86632389    | Load:  2 | Time: 0.22s (Queue: 0.03s)
+Request  28 | factorial       | Server: 6a3625815f39    | Load:  2 | Time: 0.35s (Queue: 0.05s)
+Request  31 | db_aggregate    | Server: 9f05d12fd459    | Load:  1 | Time: 0.35s (Queue: 0.04s)
+Request  33 | factorial       | Server: 4571ea10b43d    | Load:  2 | Time: 0.34s (Queue: 0.04s)
+Request  34 | db_find_users   | Server: e59b86632389    | Load:  1 | Time: 0.30s (Queue: 0.05s)
+Request  32 | db_find_users   | Server: 6a3625815f39    | Load:  2 | Time: 0.42s (Queue: 0.04s)
+Request  35 | db_find_users   | Server: 4571ea10b43d    | Load:  2 | Time: 0.40s (Queue: 0.02s)
+Request  37 | factorial       | Server: 6a3625815f39    | Load:  2 | Time: 0.36s (Queue: 0.06s)
+Request  39 | factorial       | Server: e59b86632389    | Load:  1 | Time: 0.27s (Queue: 0.06s)
+Request  36 | db_find_users   | Server: 9f05d12fd459    | Load:  2 | Time: 0.42s (Queue: 0.05s)
+Request  41 | addition        | Server: e59b86632389    | Load:  2 | Time: 0.20s (Queue: 0.05s)
+Request  40 | addition        | Server: 4571ea10b43d    | Load:  3 | Time: 0.26s (Queue: 0.03s)
+Request  38 | db_find_users   | Server: 9f05d12fd459    | Load:  2 | Time: 0.41s (Queue: 0.03s)
+Request  43 | factorial       | Server: 4571ea10b43d    | Load:  2 | Time: 0.34s (Queue: 0.04s)
+Request  46 | factorial       | Server: 9f05d12fd459    | Load:  1 | Time: 0.24s (Queue: 0.04s)
+Request  45 | sort_large_list | Server: e59b86632389    | Load:  1 | Time: 0.34s (Queue: 0.04s)
+Request  42 | sort_large_list | Server: 6a3625815f39    | Load:  2 | Time: 0.51s (Queue: 0.05s)
+Request  48 | string_length   | Server: e59b86632389    | Load:  2 | Time: 0.22s (Queue: 0.04s)
+Request  44 | db_aggregate    | Server: 6a3625815f39    | Load:  2 | Time: 0.50s (Queue: 0.04s)
+Request  49 | multiplication  | Server: 4571ea10b43d    | Load:  2 | Time: 0.26s (Queue: 0.04s)
+Request  50 | find_vowels     | Server: 4571ea10b43d    | Load:  2 | Time: 0.23s (Queue: 0.04s)
+Request  51 | find_vowels     | Server: 9f05d12fd459    | Load:  2 | Time: 0.24s (Queue: 0.05s)
+Request  52 | db_find_users   | Server: e59b86632389    | Load:  1 | Time: 0.29s (Queue: 0.04s)
+Request  47 | db_generate_data | Server: 9f05d12fd459    | Load:  2 | Time: 0.57s (Queue: 0.04s)
+Request  53 | multiplication  | Server: e59b86632389    | Load:  2 | Time: 0.28s (Queue: 0.06s)
+Request  55 | db_find_users   | Server: 4571ea10b43d    | Load:  1 | Time: 0.28s (Queue: 0.03s)
+Request  54 | db_aggregate    | Server: 6a3625815f39    | Load:  1 | Time: 0.33s (Queue: 0.03s)
+Request  57 | string_length   | Server: 4571ea10b43d    | Load:  2 | Time: 0.22s (Queue: 0.04s)
+Request  60 | string_length   | Server: 6a3625815f39    | Load:  1 | Time: 0.16s (Queue: 0.03s)
+Request  56 | db_find_users   | Server: 9f05d12fd459    | Load:  2 | Time: 0.41s (Queue: 0.03s)
+Request  61 | find_vowels     | Server: 4571ea10b43d    | Load:  1 | Time: 0.18s (Queue: 0.05s)
+Request  58 | sort_large_list | Server: e59b86632389    | Load:  1 | Time: 0.34s (Queue: 0.04s)
+Request  62 | find_vowels     | Server: 6a3625815f39    | Load:  2 | Time: 0.23s (Queue: 0.03s)
+Request  63 | addition        | Server: 6a3625815f39    | Load:  2 | Time: 0.18s (Queue: 0.03s)
+Request  59 | db_find_users   | Server: 9f05d12fd459    | Load:  2 | Time: 0.41s (Queue: 0.03s)
+Request  64 | find_vowels     | Server: 4571ea10b43d    | Load:  1 | Time: 0.18s (Queue: 0.05s)
+Request  66 | db_create_user  | Server: 6a3625815f39    | Load:  1 | Time: 0.24s (Queue: 0.04s)
+Request  65 | sort_large_list | Server: e59b86632389    | Load:  1 | Time: 0.34s (Queue: 0.04s)
+Request  68 | db_create_user  | Server: 9f05d12fd459    | Load:  1 | Time: 0.25s (Queue: 0.05s)
+Request  72 | addition        | Server: e59b86632389    | Load:  2 | Time: 0.18s (Queue: 0.03s)
+Request  71 | db_create_user  | Server: 6a3625815f39    | Load:  1 | Time: 0.24s (Queue: 0.04s)
+Request  69 | db_aggregate    | Server: 4571ea10b43d    | Load:  1 | Time: 0.35s (Queue: 0.05s)
+Request  67 | db_aggregate    | Server: e59b86632389    | Load:  2 | Time: 0.48s (Queue: 0.03s)
+Request  73 | find_vowels     | Server: 6a3625815f39    | Load:  2 | Time: 0.24s (Queue: 0.04s)
+Request  76 | find_vowels     | Server: e59b86632389    | Load:  1 | Time: 0.16s (Queue: 0.03s)
+Request  70 | db_aggregate    | Server: 9f05d12fd459    | Load:  2 | Time: 0.49s (Queue: 0.04s)
+Request  75 | multiplication  | Server: 9f05d12fd459    | Load:  2 | Time: 0.27s (Queue: 0.04s)
+Request  78 | addition        | Server: 6a3625815f39    | Load:  2 | Time: 0.20s (Queue: 0.05s)
+Request  74 | db_find_users   | Server: 4571ea10b43d    | Load:  2 | Time: 0.44s (Queue: 0.07s)
+Request  80 | multiplication  | Server: 9f05d12fd459    | Load:  1 | Time: 0.20s (Queue: 0.05s)
+Request  81 | find_vowels     | Server: 9f05d12fd459    | Load:  2 | Time: 0.25s (Queue: 0.05s)
+Request  77 | db_aggregate    | Server: e59b86632389    | Load:  2 | Time: 0.48s (Queue: 0.03s)
+Request  79 | db_find_users   | Server: 6a3625815f39    | Load:  2 | Time: 0.40s (Queue: 0.03s)
+Request  82 | db_find_users   | Server: 4571ea10b43d    | Load:  1 | Time: 0.31s (Queue: 0.06s)
+Request  84 | multiplication  | Server: 6a3625815f39    | Load:  2 | Time: 0.26s (Queue: 0.03s)
+Request  83 | db_find_users   | Server: 4571ea10b43d    | Load:  2 | Time: 0.41s (Queue: 0.03s)
+Request  86 | db_find_users   | Server: e59b86632389    | Load:  1 | Time: 0.30s (Queue: 0.05s)
+Request  88 | multiplication  | Server: e59b86632389    | Load:  2 | Time: 0.26s (Queue: 0.03s)
+Request  89 | string_length   | Server: 4571ea10b43d    | Load:  2 | Time: 0.22s (Queue: 0.04s)
+Request  85 | db_aggregate    | Server: 9f05d12fd459    | Load:  2 | Time: 0.50s (Queue: 0.04s)
+Request  87 | db_find_users   | Server: 9f05d12fd459    | Load:  2 | Time: 0.41s (Queue: 0.03s)
+Request  91 | find_vowels     | Server: 4571ea10b43d    | Load:  2 | Time: 0.21s (Queue: 0.02s)
+Request  92 | multiplication  | Server: e59b86632389    | Load:  1 | Time: 0.21s (Queue: 0.06s)
+Request  90 | sort_large_list | Server: 6a3625815f39    | Load:  1 | Time: 0.35s (Queue: 0.04s)
+Request  93 | addition        | Server: 4571ea10b43d    | Load:  2 | Time: 0.19s (Queue: 0.04s)
+Request  94 | db_create_user  | Server: e59b86632389    | Load:  2 | Time: 0.34s (Queue: 0.04s)
+Request  95 | db_find_users   | Server: 9f05d12fd459    | Load:  1 | Time: 0.31s (Queue: 0.06s)
+Request  96 | db_create_user  | Server: 4571ea10b43d    | Load:  1 | Time: 0.26s (Queue: 0.06s)
+Request  98 | find_vowels     | Server: 9f05d12fd459    | Load:  2 | Time: 0.25s (Queue: 0.05s)
+Request  99 | find_vowels     | Server: e59b86632389    | Load:  2 | Time: 0.24s (Queue: 0.05s)
+Request  97 | sort_large_list | Server: 6a3625815f39    | Load:  1 | Time: 0.35s (Queue: 0.05s)
+Request 103 | addition        | Server: 9f05d12fd459    | Load:  1 | Time: 0.14s (Queue: 0.04s)
+Request 102 | find_vowels     | Server: 4571ea10b43d    | Load:  2 | Time: 0.24s (Queue: 0.05s)
+Request 100 | db_find_users   | Server: 6a3625815f39    | Load:  2 | Time: 0.41s (Queue: 0.03s)
+Request 104 | find_vowels     | Server: 9f05d12fd459    | Load:  2 | Time: 0.24s (Queue: 0.04s)
+Request 101 | db_aggregate    | Server: 4571ea10b43d    | Load:  2 | Time: 0.49s (Queue: 0.04s)
+Request 106 | factorial       | Server: e59b86632389    | Load:  1 | Time: 0.25s (Queue: 0.05s)
+Request 105 | sort_large_list | Server: 6a3625815f39    | Load:  2 | Time: 0.48s (Queue: 0.03s)
+Request 107 | db_find_users   | Server: 9f05d12fd459    | Load:  2 | Time: 0.42s (Queue: 0.04s)
+Request 109 | db_create_user  | Server: e59b86632389    | Load:  2 | Time: 0.34s (Queue: 0.04s)
+Request 108 | db_aggregate    | Server: 4571ea10b43d    | Load:  2 | Time: 0.49s (Queue: 0.03s)
+Request 112 | db_create_user  | Server: 6a3625815f39    | Load:  2 | Time: 0.34s (Queue: 0.04s)
+Request 115 | string_length   | Server: 9f05d12fd459    | Load:  2 | Time: 0.21s (Queue: 0.03s)
+Request 110 | sort_large_list | Server: 4571ea10b43d    | Load:  2 | Time: 0.51s (Queue: 0.06s)
+Request 116 | find_vowels     | Server: e59b86632389    | Load:  2 | Time: 0.22s (Queue: 0.03s)
+Request 111 | sort_large_list | Server: e59b86632389    | Load:  2 | Time: 0.49s (Queue: 0.04s)
+Request 113 | db_find_users   | Server: 9f05d12fd459    | Load:  2 | Time: 0.41s (Queue: 0.04s)
+Request 114 | db_find_users   | Server: 6a3625815f39    | Load:  2 | Time: 0.43s (Queue: 0.05s)
+Request 120 | find_vowels     | Server: e59b86632389    | Load:  1 | Time: 0.18s (Queue: 0.05s)
+Request 119 | find_vowels     | Server: 9f05d12fd459    | Load:  3 | Time: 0.33s (Queue: 0.04s)
+Request 122 | addition        | Server: 4571ea10b43d    | Load:  2 | Time: 0.19s (Queue: 0.04s)
+Request 121 | find_vowels     | Server: 6a3625815f39    | Load:  2 | Time: 0.24s (Queue: 0.05s)
+Request 118 | db_create_user  | Server: 9f05d12fd459    | Load:  3 | Time: 0.49s (Queue: 0.04s)
+Request 125 | multiplication  | Server: e59b86632389    | Load:  2 | Time: 0.26s (Queue: 0.03s)
+Request 124 | factorial       | Server: 6a3625815f39    | Load:  2 | Time: 0.34s (Queue: 0.04s)
+Request 123 | db_find_users   | Server: e59b86632389    | Load:  2 | Time: 0.43s (Queue: 0.06s)
+Request 117 | db_generate_data | Server: 4571ea10b43d    | Load:  3 | Time: 0.82s (Queue: 0.03s)
+Request 126 | db_find_users   | Server: 6a3625815f39    | Load:  2 | Time: 0.41s (Queue: 0.03s)
+Request 131 | find_vowels     | Server: e59b86632389    | Load:  2 | Time: 0.24s (Queue: 0.04s)
+Request 133 | addition        | Server: 4571ea10b43d    | Load:  2 | Time: 0.19s (Queue: 0.04s)
+Request 127 | sort_large_list | Server: 9f05d12fd459    | Load:  2 | Time: 0.50s (Queue: 0.05s)
+Request 128 | db_aggregate    | Server: 4571ea10b43d    | Load:  2 | Time: 0.49s (Queue: 0.04s)
+Request 130 | db_find_users   | Server: 9f05d12fd459    | Load:  2 | Time: 0.43s (Queue: 0.05s)
+Request 134 | string_length   | Server: 9f05d12fd459    | Load:  3 | Time: 0.31s (Queue: 0.04s)
+Request 135 | multiplication  | Server: 6a3625815f39    | Load:  2 | Time: 0.31s (Queue: 0.08s)
+Request 137 | string_length   | Server: 4571ea10b43d    | Load:  2 | Time: 0.21s (Queue: 0.03s)
+Request 129 | sort_large_list | Server: e59b86632389    | Load:  3 | Time: 0.72s (Queue: 0.04s)
+Request 138 | multiplication  | Server: 9f05d12fd459    | Load:  2 | Time: 0.29s (Queue: 0.06s)
+Request 136 | db_find_users   | Server: e59b86632389    | Load:  2 | Time: 0.41s (Queue: 0.04s)
+Request 142 | addition        | Server: 4571ea10b43d    | Load:  2 | Time: 0.19s (Queue: 0.04s)
+Request 141 | db_create_user  | Server: 4571ea10b43d    | Load:  1 | Time: 0.24s (Queue: 0.04s)
+Request 132 | sort_large_list | Server: 6a3625815f39    | Load:  3 | Time: 0.72s (Queue: 0.04s)
+Request 143 | find_vowels     | Server: e59b86632389    | Load:  2 | Time: 0.23s (Queue: 0.03s)
+Request 140 | sort_large_list | Server: 9f05d12fd459    | Load:  2 | Time: 0.49s (Queue: 0.04s)
+Request 146 | multiplication  | Server: 6a3625815f39    | Load:  2 | Time: 0.27s (Queue: 0.04s)
+Request 145 | sort_large_list | Server: 4571ea10b43d    | Load:  1 | Time: 0.35s (Queue: 0.05s)
+Request 144 | db_find_users   | Server: e59b86632389    | Load:  2 | Time: 0.41s (Queue: 0.03s)
+Request 147 | multiplication  | Server: 9f05d12fd459    | Load:  2 | Time: 0.27s (Queue: 0.04s)
+Request 149 | string_length   | Server: 9f05d12fd459    | Load:  2 | Time: 0.26s (Queue: 0.08s)
+Request 139 | db_generate_data | Server: 6a3625815f39    | Load:  3 | Time: 0.83s (Queue: 0.04s)
+Request 148 | db_find_users   | Server: e59b86632389    | Load:  2 | Time: 0.40s (Queue: 0.02s)
+Request 150 | multiplication  | Server: 9f05d12fd459    | Load:  3 | Time: 0.38s (Queue: 0.04s)
+
+==================== least_loaded — mixed workload Summary ====================
+Total Duration: 7.83s
+Requests per second: 19.2
+
+Request Statistics:
+  Total Requests: 150
+  Successful: 150
+  Failed: 0
+  Success Rate: 100.0%
+
+Response Time Statistics:
+  Average: 0.33s
+  Median: 0.30s
+  Min: 0.13s
+  Max: 0.83s
+  Std Dev: 0.13s
+
+Server Distribution and Performance:
+  4571ea10b43d:
+    Requests: 38 (25.3%)
+    Avg Response: 0.30s
+    Min/Max: 0.14s / 0.82s
+  6a3625815f39:
+    Requests: 34 (22.7%)
+    Avg Response: 0.36s
+    Min/Max: 0.16s / 0.83s
+  9f05d12fd459:
+    Requests: 39 (26.0%)
+    Avg Response: 0.34s
+    Min/Max: 0.14s / 0.57s
+  e59b86632389:
+    Requests: 39 (26.0%)
+    Avg Response: 0.31s
+    Min/Max: 0.13s / 0.72s
+
+Task Type Performance:
+  addition       :  15 requests, avg=0.18s, max=0.26s
+  db_aggregate   :  14 requests, avg=0.44s, max=0.50s
+  db_create_user :  13 requests, avg=0.30s, max=0.49s
+  db_find_users  :  29 requests, avg=0.39s, max=0.44s
+  db_generate_data:   4 requests, avg=0.65s, max=0.83s
+  factorial      :   9 requests, avg=0.31s, max=0.36s
+  find_vowels    :  22 requests, avg=0.23s, max=0.33s
+  multiplication :  17 requests, avg=0.26s, max=0.38s
+  sort_large_list:  16 requests, avg=0.47s, max=0.72s
+  string_length  :  11 requests, avg=0.22s, max=0.31s
+============================================================
+
+=== Algorithm Comparison ===
+
+Metric           |  Round Robin |  Source Hash | Least Loaded
+------------------------------------------------------------
+Success Rate     |        95.3% |        64.7% |       100.0%
+Avg Response     |        0.72s |        1.07s |        0.33s
+Min Response     |        0.15s |        0.11s |        0.13s
+Max Response     |        7.72s |        8.57s |        0.83s
+Failed Reqs      |            7 |           53 |            0
+
+=== Test Complete ===
+
+python Client/results_analyzer.py --fpr --idms-url http://localhost:5001
+   
+──────────────────── FALSE POSITIVE RATE ANALYSIS ────────────────────
+  IDMS counters (since last reset):
+    allow        : 1828
+    block        : 983
+    honeypot     : 0
+    deprioritise : 21
+    total        : 2832
+
+  False positive events: 22 (block or deprioritise on non-attack IPs)
+  FPR                  : 0.78%  (22 / 2832)
+
+  By rule:
+    anomaly                        : 16
+    missing_api_key                : 3
+    invalid_api_key                : 3
+
+  By IP:
+    172.18.0.10          : 22 events  {'deprioritise': 16, 'block': 6}
+
+  Verdict: ACCEPTABLE — minor tuning may improve
+
+  result analyser on csv is showing error
+  PS C:\Users\anjal\Load-Balancer> python Client/results_analyzer.py results/attack_flood_*.csv
+Traceback (most recent call last):
+  File "C:\Users\anjal\Load-Balancer\Client\results_analyzer.py", line 364, in <module>
+    main()
+  File "C:\Users\anjal\Load-Balancer\Client\results_analyzer.py", line 332, in main
+    rows = _load_csv(path)
+           ^^^^^^^^^^^^^^^
+  File "C:\Users\anjal\Load-Balancer\Client\results_analyzer.py", line 52, in _load_csv
+    with open(path, newline="", encoding="utf-8") as fh:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+OSError: [Errno 22] Invalid argument: 'results/attack_flood_*.csv'

@@ -5,5 +5,6 @@ COPY performance_metrics.py .
 RUN pip install -r Requirements.txt
 COPY client.py .
 COPY attack_client.py .
+COPY results_analyzer.py .
 RUN mkdir -p results
 CMD ["python", "client.py"]

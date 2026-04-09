@@ -31,6 +31,7 @@ services:
   server1:
     build: ./Server/Server1
     container_name: server1
+    hostname: server1
     depends_on:
       database:
         condition: service_healthy
@@ -47,6 +48,7 @@ services:
   server2:
     build: ./Server/Server2
     container_name: server2
+    hostname: server2
     depends_on:
       database:
         condition: service_healthy
@@ -63,6 +65,7 @@ services:
   server3:
     build: ./Server/Server3
     container_name: server3
+    hostname: server3
     depends_on:
       database:
         condition: service_healthy
@@ -79,6 +82,7 @@ services:
   server4:
     build: ./Server/Server4
     container_name: server4
+    hostname: server4
     depends_on:
       database:
         condition: service_healthy

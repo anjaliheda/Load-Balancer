@@ -8,12 +8,20 @@ from collections import defaultdict #initializes missing keys with default value
 import string #for generating random user names
 import json #encoding and decoding json data
 import socket
+import os
 
 
 # Configuration
-LOAD_BALANCER_URL = "http://idms:5001/request"
-SET_ALGO_URL      = "http://idms:5001/set_algorithm"
-IDMS_URL          = "http://idms:5001"
+# TARGET_URL controls where requests are sent.
+#   Default (http://idms:5001): requests flow through the IDMS — normal operation (S3, S4).
+#   Set to http://loadbalancer:5000 (or http://localhost:5000 from host): bypasses IDMS
+#   entirely, sending directly to the load balancer (S1, S2 experimental scenarios).
+_target_base = os.environ.get("TARGET_URL", "http://idms:5001").rstrip("/")
+BYPASS_IDMS   = "loadbalancer" in _target_base or (":5000" in _target_base and "idms" not in _target_base)
+
+LOAD_BALANCER_URL = f"{_target_base}/request"
+SET_ALGO_URL      = f"{_target_base}/set_algorithm"
+IDMS_URL          = "http://idms:5001"   # always points to IDMS for admin ops (health, unblock)
 
 
 def _wait_for_idms(timeout=60):
@@ -130,13 +138,6 @@ class PerformanceMetrics:
                 print(f"    Requests: {request_count} ({percentage:.1f}%)")
                 print(f"    Avg Response: {stats['avg']:.2f}s")
                 print(f"    Min/Max: {stats['min']:.2f}s / {stats['max']:.2f}s")
-
-        if self.task_distribution:
-            print(f"\nTask Type Performance:")
-            for task_type, times in sorted(self.task_distribution.items()):
-                print(f"  {task_type:15s}: {len(times):3d} requests, "
-                      f"avg={statistics.mean(times):.2f}s, "
-                      f"max={max(times):.2f}s")
 
         if self.error_distribution:
             print(f"\nError Distribution:")
@@ -355,10 +356,14 @@ def test_authentication():
 
 def main():
     """Main test execution function"""
-    _wait_for_idms()
-    _self_unblock()
-    test_authentication()
-    _self_unblock()
+    if BYPASS_IDMS:
+        print(f"[Direct LB mode] Bypassing IDMS — sending requests directly to {_target_base}")
+        print("Skipping IDMS health check, auth tests, and self-unblock.")
+    else:
+        _wait_for_idms()
+        _self_unblock()
+        test_authentication()
+        _self_unblock()
 
     NUM_REQUESTS = 150   # mixed tasks per algorithm run
     DELAY_BETWEEN = 0.05 # 20 req/s — stays under IDMS rate limit (200/10s)
