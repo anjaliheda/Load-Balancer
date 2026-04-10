@@ -96,6 +96,10 @@ class _IPState:
     last_ts: Optional[float] = None
     # Sliding window of inter-arrival times (seconds)
     inter_arrivals: deque = field(default_factory=deque)
+    # Ring buffer of recent Z-score observations (last 200 scored requests).
+    # Each entry: (ts, iat_z, combined, baseline_median_ms, baseline_mad_ms)
+    # Populated after warmup on every scored request regardless of verdict.
+    zscore_log: deque = field(default_factory=lambda: deque(maxlen=200))
 
 
 _ip_states: dict = defaultdict(_IPState)
@@ -247,6 +251,16 @@ def score(
         # Local copy of n for logging outside lock
         baseline_n = n_samples
 
+        # ── Record Z-score observation for research metrics ───────────────────
+        # Capture baseline stats in ms for readability in the metrics endpoint.
+        if len(iat_list) >= 2:
+            _b_med_ms  = _median(iat_list[:-1]) * 1000
+            _b_mad_ms  = _mad(iat_list[:-1], _median(iat_list[:-1])) * 1000
+        else:
+            _b_med_ms = 0.0
+            _b_mad_ms = 0.0
+        state.zscore_log.append((ts, iat_z, _b_med_ms, _b_mad_ms))
+
     # ── Weighted combined score ───────────────────────────────────────────────
     combined = (
         cfg["payload_zscore_weight"] * payload_z +
@@ -340,9 +354,32 @@ def get_anomaly_snapshot() -> dict:
     with _state_lock:
         for ip, state in _ip_states.items():
             n = sum(1 for ts, _ in state.samples if ts >= cutoff)
-            if n > 0:
-                out[ip] = {
-                    "samples":   n,
-                    "warmed_up": n >= min_n,
+            zlog = list(state.zscore_log)
+
+            # Skip IPs with no recent samples AND no logged Z-scores
+            if n == 0 and not zlog:
+                continue
+
+            # Z-score summary from the ring buffer (persists after window eviction)
+            if zlog:
+                iat_zs = [e[1] for e in zlog]
+                b_meds = [e[2] for e in zlog if e[2] > 0]
+                b_mads = [e[3] for e in zlog if e[3] > 0]
+                zscore_stats = {
+                    "observations":          len(zlog),
+                    "iat_z_mean":            round(sum(iat_zs) / len(iat_zs), 3),
+                    "iat_z_max":             round(max(iat_zs), 3),
+                    "iat_z_above_threshold": sum(1 for z in iat_zs if z > ANOMALY_CONFIG["zscore_threshold"]),
+                    "baseline_median_ms":    round(sum(b_meds) / len(b_meds), 2) if b_meds else 0.0,
+                    "baseline_mad_ms":       round(sum(b_mads) / len(b_mads), 2) if b_mads else 0.0,
+                    "threshold":             ANOMALY_CONFIG["zscore_threshold"],
                 }
+            else:
+                zscore_stats = {}
+
+            out[ip] = {
+                "samples":      n,
+                "warmed_up":    n >= min_n,
+                "zscore_stats": zscore_stats,
+            }
     return out
