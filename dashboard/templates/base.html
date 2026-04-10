@@ -220,11 +220,12 @@
 
 <nav class="topnav">
   <div class="brand">IDMS <span>Dashboard</span></div>
-  <a href="/loadbalancer"   class="{% if active_page == 'lb' %}active{% endif %}"><span class="nav-num">1</span>Load Balancer</a>
-  <a href="/rules"          class="{% if active_page == 'rules' %}active{% endif %}"><span class="nav-num">2</span>Rule Engine</a>
-  <a href="/anomaly"        class="{% if active_page == 'anomaly' %}active{% endif %}"><span class="nav-num">3</span>Anomaly Engine</a>
-  <a href="/mitigation"     class="{% if active_page == 'mitigation' %}active{% endif %}"><span class="nav-num">4</span>Mitigation</a>
-  <a href="/"               class="{% if active_page == 'live' %}active{% endif %}"><span class="nav-num">5</span>Live Demo</a>
+  <a href="/"               class="{% if active_page == 'live' %}active{% endif %}"><span class="nav-num">1</span>Live Demo</a>
+  <a href="/loadbalancer"   class="{% if active_page == 'lb' %}active{% endif %}"><span class="nav-num">2</span>Load Balancer</a>
+  <a href="/rules"          class="{% if active_page == 'rules' %}active{% endif %}"><span class="nav-num">3</span>Rule Engine</a>
+  <a href="/anomaly"        class="{% if active_page == 'anomaly' %}active{% endif %}"><span class="nav-num">4</span>Anomaly Engine</a>
+  <a href="/mitigation"     class="{% if active_page == 'mitigation' %}active{% endif %}"><span class="nav-num">5</span>Mitigation</a>
+  <a href="/findings"       class="{% if active_page == 'findings' %}active{% endif %}"><span class="nav-num">6</span>Findings</a>
 </nav>
 
 {% block body %}{% endblock %}

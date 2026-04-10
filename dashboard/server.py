@@ -104,6 +104,11 @@ def page_mitigation():
     return render_template("mitigation.html", active_page="mitigation")
 
 
+@app.route("/findings")
+def page_findings():
+    return render_template("findings.html", active_page="findings")
+
+
 @app.route("/api/overview")
 def api_overview():
     idms_healthy = False
@@ -194,6 +199,18 @@ def api_events():
     except Exception as e:
         return jsonify({"error": str(e)}), 502
     return jsonify([])
+
+
+@app.route("/api/anomaly_snapshot")
+def api_anomaly_snapshot():
+    """Return per-IP anomaly baseline stats including Z-score ring buffer."""
+    try:
+        r = http.get(f"{IDMS_URL}/idms/metrics?n=1", timeout=3)
+        if r.status_code == 200:
+            return jsonify(r.json().get("anomaly", {}))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 502
+    return jsonify({})
 
 
 @app.route("/api/blocked")

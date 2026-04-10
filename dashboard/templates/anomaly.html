@@ -254,6 +254,19 @@
     </div>
   </div>
 
+  <!-- Live Z-score stats -->
+  <div class="card">
+    <div class="card-title">Live Z-score ring buffer &mdash; last 200 scored requests from demo IP</div>
+    <p style="font-size:13px; color:var(--muted); margin-bottom:4px;">
+      These numbers are the actual IAT Z-scores the anomaly engine computed during the most recent activity from the demo IP (10.10.0.4).
+      After a burst attack, you will see the max Z-score spike above&nbsp;1.5 and the above-threshold count increase.
+      After the slow-rate experiment, mean&nbsp;=&nbsp;0.304, max&nbsp;=&nbsp;1.171 &mdash; demonstrating baseline contamination in real data.
+    </p>
+    <div id="zscore-live-panel">
+      <p style="font-size:13px; color:var(--muted); margin-top:10px;">Waiting for data...</p>
+    </div>
+  </div>
+
 </div>
 {% endblock %}
 
@@ -287,39 +300,62 @@
   })();
 
   // ── Baseline status polling ────────────────────────────────────────────────
+  // Demo anomaly IP (must match DEMO_IPS["anomaly"] in server.py)
+  const ANOMALY_DEMO_IP = '10.10.0.4';
+
   async function checkBaseline() {
+    const dot    = document.getElementById('bs-dot');
+    const label  = document.getElementById('bs-label');
+    const detail = document.getElementById('bs-detail');
     try {
-      const r = await fetch('/api/overview');
-      const d = await r.json();
-      const anomaly = (d.rates || {});
-      // Check the anomaly snapshot from overview
-      const dot   = document.getElementById('bs-dot');
-      const label = document.getElementById('bs-label');
-      const detail = document.getElementById('bs-detail');
+      const snap = await (await fetch('/api/anomaly_snapshot')).json();
+      const ipData  = snap[ANOMALY_DEMO_IP] || {};
+      const warmed  = ipData.warmed_up  || false;
+      const samples = ipData.samples    || 0;
+      const zstats  = ipData.zscore_stats || {};
 
-      // Fetch full config to check anomaly state
-      const r2 = await fetch('/api/config');
-      const cfg = await r2.json();
-      const minSamples = (cfg.anomaly || {}).min_baseline_samples || 150;
-
-      // The overview endpoint includes anomaly snapshot
-      const r3 = await fetch('/api/overview');
-      const d3 = await r3.json();
-
-      // Look for anomaly IP baseline info (not directly in overview, approximate from counters)
-      const totalAllow = (d3.counters || {}).allow || 0;
-
-      if (totalAllow >= minSamples) {
+      if (warmed) {
         dot.className = 'bs-dot ready';
         label.textContent = 'Baseline ready \u2014 anomaly scoring is active';
-        detail.textContent = `${totalAllow} requests processed, scoring threshold: ${minSamples} samples`;
+        detail.textContent = `${samples} samples in current window`;
       } else {
         dot.className = 'bs-dot warming';
-        label.textContent = `Warming up \u2014 ${totalAllow} / ${minSamples} samples`;
-        detail.textContent = 'Background traffic is building the baseline automatically';
+        label.textContent = `Warming up \u2014 ${samples} / 150 samples`;
+        detail.textContent = 'Background traffic is building the per-IP baseline automatically';
+      }
+
+      // Update live Z-score stats panel if it exists
+      const panel = document.getElementById('zscore-live-panel');
+      if (panel) {
+        if (zstats.observations > 0) {
+          panel.innerHTML = `
+            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:10px;">
+              <div style="text-align:center; padding:12px; background:var(--bg); border-radius:8px; border:1px solid var(--border);">
+                <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Z-score mean</div>
+                <div style="font-size:28px; font-weight:700; color:${zstats.iat_z_mean > 1.5 ? 'var(--block)' : 'var(--allow)'}">${zstats.iat_z_mean.toFixed(3)}</div>
+              </div>
+              <div style="text-align:center; padding:12px; background:var(--bg); border-radius:8px; border:1px solid var(--border);">
+                <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Z-score max</div>
+                <div style="font-size:28px; font-weight:700; color:${zstats.iat_z_max > 1.5 ? 'var(--block)' : 'var(--text)'}">${zstats.iat_z_max.toFixed(3)}</div>
+              </div>
+              <div style="text-align:center; padding:12px; background:var(--bg); border-radius:8px; border:1px solid var(--border);">
+                <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Above threshold</div>
+                <div style="font-size:28px; font-weight:700; color:${zstats.iat_z_above_threshold > 0 ? 'var(--block)' : 'var(--allow)'}">${zstats.iat_z_above_threshold}</div>
+              </div>
+            </div>
+            <div style="margin-top:10px; font-size:12px; color:var(--muted); padding:8px 12px; background:var(--bg); border-radius:6px; border:1px solid var(--border);">
+              Baseline at scoring time &mdash; median: <b>${zstats.baseline_median_ms} ms</b> &nbsp; MAD: <b>${zstats.baseline_mad_ms} ms</b>
+              &nbsp;&nbsp; threshold: <b>${zstats.threshold}</b>
+              &nbsp;&nbsp; observations in ring: <b>${zstats.observations}</b>
+            </div>`;
+        } else if (warmed) {
+          panel.innerHTML = '<p style="font-size:13px; color:var(--muted); margin-top:10px;">No scored requests yet &mdash; trigger a burst to see Z-score data.</p>';
+        } else {
+          panel.innerHTML = '<p style="font-size:13px; color:var(--muted); margin-top:10px;">Waiting for warmup to complete before scoring begins.</p>';
+        }
       }
     } catch (e) {
-      document.getElementById('bs-label').textContent = 'Cannot reach IDMS';
+      label.textContent = 'Cannot reach IDMS';
     }
   }
   checkBaseline();
