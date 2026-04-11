@@ -3,88 +3,119 @@
 
 {% block extra_css %}
 /* ── Pipeline ── */
-.arch-pipeline {
-  display: flex; align-items: center; justify-content: center; gap: 0; padding: 24px 0;
+.pipe-row {
+  display: flex; align-items: center; justify-content: center; gap: 0; padding: 20px 0;
 }
 .pipe-node {
-  text-align: center; padding: 14px 20px; border-radius: 10px;
-  border: 2px solid var(--border); background: var(--card); min-width: 120px;
+  text-align: center; padding: 12px 18px; border-radius: 10px;
+  border: 2px solid var(--border); background: var(--card); min-width: 110px;
+  cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s;
 }
-.pipe-node .pn-icon  { font-size: 24px; margin-bottom: 4px; }
-.pipe-node .pn-label { font-size: 12px; font-weight: 600; color: var(--text); }
-.pipe-node .pn-sub   { font-size: 11px; color: var(--muted); }
-.pipe-node.highlighted {
+.pipe-node:hover { border-color: var(--accent); }
+.pipe-node.lit {
   border-color: var(--p2); background: #ecfdf5;
   box-shadow: 0 0 0 4px rgba(5,150,105,0.1);
 }
-.pipe-node.dimmed { opacity: 0.4; }
-.pipe-arrow {
-  width: 40px; height: 2px; background: var(--border); position: relative; margin: 0 -2px;
-}
+.pipe-node.dimmed { opacity: 0.35; }
+.pipe-node .pn-icon  { font-size: 22px; margin-bottom: 4px; }
+.pipe-node .pn-label { font-size: 12px; font-weight: 600; color: var(--text); }
+.pipe-node .pn-sub   { font-size: 10px; color: var(--muted); }
+.pipe-arrow { width: 36px; height: 2px; background: var(--border); position: relative; margin: 0 -1px; flex-shrink:0; }
 .pipe-arrow::after {
-  content: ''; position: absolute; right: -5px; top: -4px;
-  border: 5px solid transparent; border-left: 6px solid var(--border);
+  content:''; position:absolute; right:-5px; top:-4px;
+  border:5px solid transparent; border-left:6px solid var(--border);
 }
 
-/* ── Concept cards ── */
-.concept-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.concept-card {
-  border: 1px solid var(--border); border-radius: 10px;
-  padding: 20px 24px; background: var(--card);
+/* ── Concept toggle rows ── */
+.concept-row {
+  display: flex; gap: 10px; padding: 12px 16px; margin-bottom: 8px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 10px;
+  cursor: pointer; transition: border-color 0.15s; align-items: flex-start;
 }
-.concept-card .cc-title {
-  font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 8px;
-}
-.concept-card .cc-body {
-  font-size: 13px; color: var(--muted); line-height: 1.7;
-}
+.concept-row:hover { border-color: #6ee7b7; }
+.concept-row.open  { border-color: var(--p2); background: #f0fdf4; }
+.concept-row .cr-arrow { color: var(--muted); font-size: 11px; transition: transform 0.2s; margin-top: 2px; flex-shrink: 0; }
+.concept-row.open .cr-arrow { transform: rotate(90deg); color: var(--p2); }
+.cr-title { font-size: 13px; font-weight: 600; color: var(--text); }
+.cr-body  { display: none; font-size: 13px; color: var(--muted); line-height: 1.7; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); }
+.concept-row.open .cr-body { display: block; }
 
-/* ── Formula box ── */
-.formula-box {
-  background: #1a1d23; color: #e5e7eb; border-radius: 10px;
-  padding: 20px 24px; font-family: 'SF Mono', 'Consolas', monospace;
-  font-size: 14px; line-height: 2; overflow-x: auto;
+/* ── Interactive formula ── */
+.formula-wrap {
+  background: #1a1d23; border-radius: 10px; padding: 20px 24px;
+  font-family: 'SF Mono','Consolas',monospace; font-size: 14px; line-height: 2.2;
+  overflow-x: auto; position: relative;
 }
-.formula-box .fm-comment { color: #6b7280; }
-.formula-box .fm-keyword { color: #93c5fd; }
-.formula-box .fm-value   { color: #86efac; }
-.formula-box .fm-op      { color: #fbbf24; }
+.fm-comment { color: #4b5563; }
+.fm-op      { color: #fbbf24; }
+.fm-val     { color: #86efac; }
 
-/* ── Z-score visual ── */
-.zscore-visual {
-  display: flex; align-items: flex-end; gap: 3px;
-  height: 120px; padding: 16px 0;
+/* Clickable formula terms */
+.fm-term {
+  cursor: pointer; border-radius: 4px; padding: 0 3px;
+  transition: background 0.15s; position: relative;
 }
-.zbar {
-  flex: 1; border-radius: 3px 3px 0 0; min-width: 6px;
-  transition: all 0.3s; position: relative;
+.fm-term:hover { background: rgba(255,255,255,0.12); }
+.fm-term.active { background: rgba(99,102,241,0.35); }
+.fm-z    { color: #93c5fd; }
+.fm-x    { color: #f9a8d4; }
+.fm-med  { color: #fde68a; }
+.fm-mad  { color: #a5b4fc; }
+.fm-k    { color: #86efac; }
+
+/* Formula explanation panel */
+#formula-explain {
+  background: #252830; border: 1px solid #374151; border-radius: 8px;
+  padding: 12px 16px; margin-top: 12px; font-family: inherit;
+  font-size: 13px; color: #d1d5db; line-height: 1.6; min-height: 44px;
+  display: none;
 }
-.zbar.baseline { background: #dbeafe; }
-.zbar.anomaly  { background: #fca5a5; }
-.zbar-label {
-  position: absolute; bottom: -20px; left: 50%; transform: translateX(-50%);
-  font-size: 9px; color: var(--muted); white-space: nowrap;
+#formula-explain.show { display: block; animation: fade-in 0.2s; }
+@keyframes fade-in { from{opacity:0} to{opacity:1} }
+
+/* ── IAT distribution chart ── */
+.iat-chart-wrap { position: relative; }
+.iat-legend {
+  display: flex; gap: 16px; margin-top: 10px; font-size: 11px; color: var(--muted);
 }
+.iat-legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 4px; }
+
+/* ── Design decisions table ── */
+.decisions-grid { display: flex; flex-direction: column; gap: 8px; }
+.decision-row {
+  display: flex; gap: 10px; padding: 11px 14px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  cursor: pointer; transition: border-color 0.15s; align-items: flex-start;
+}
+.decision-row:hover { border-color: #6ee7b7; }
+.decision-row.open  { border-color: var(--p2); }
+.decision-row .dr-arrow { color: var(--muted); font-size: 11px; transition: transform 0.2s; margin-top:2px; flex-shrink:0; }
+.decision-row.open .dr-arrow { transform: rotate(90deg); color: var(--p2); }
+.dr-key    { font-size: 13px; font-weight: 600; color: var(--text); }
+.dr-short  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.dr-detail { display:none; font-size:12px; color:var(--muted); line-height:1.6; margin-top:8px; padding-top:8px; border-top:1px solid var(--border); }
+.decision-row.open .dr-detail { display: block; }
 
 /* ── Baseline status ── */
-.baseline-status {
-  display: flex; align-items: center; gap: 12px;
-  padding: 14px 18px; border-radius: 8px;
-  border: 1px solid var(--border); background: var(--bg);
+.bs-strip {
+  display: flex; align-items: center; gap: 12px; padding: 14px 18px;
+  border-radius: 8px; border: 1px solid var(--border); background: var(--bg);
 }
-.bs-dot {
-  width: 10px; height: 10px; border-radius: 50%;
-}
-.bs-dot.warming { background: #fbbf24; animation: pulse 1.5s infinite; }
+.bs-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.bs-dot.warming { background: #f59e0b; animation: pulse 1.5s infinite; }
 .bs-dot.ready   { background: var(--allow); }
-@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
 
-/* ── Demo section ── */
-#anomaly-demo-status {
-  font-size: 13px; color: var(--muted); padding: 10px 14px;
-  background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
-  min-height: 38px; line-height: 1.5;
+/* ── Z-score panel ── */
+#zscore-live-panel .zsp-grid {
+  display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-top: 10px;
 }
+.zsp-cell {
+  text-align: center; padding: 12px; background: var(--bg);
+  border-radius: 8px; border: 1px solid var(--border);
+}
+.zsp-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+.zsp-value { font-size: 28px; font-weight: 700; }
 {% endblock %}
 
 {% block body %}
@@ -92,175 +123,189 @@
 
   <div class="page-header">
     <h2>Anomaly Engine <span style="color:var(--p2)">(Phase 2)</span></h2>
-    <p>Per-IP statistical baseline profiling &mdash; detects deviations the rule engine can't see</p>
+    <p>Per-IP statistical baseline profiling &mdash; detects deviations the rule engine cannot see</p>
   </div>
 
-  <!-- Pipeline position -->
+  <!-- Pipeline -->
   <div class="card">
-    <div class="card-title">Position in the pipeline</div>
-    <div class="arch-pipeline">
-      <div class="pipe-node dimmed">
-        <div class="pn-icon">&#x1F4BB;</div>
-        <div class="pn-label">Client</div>
+    <div class="card-title">Position in the pipeline &mdash; click a stage</div>
+    <div class="pipe-row">
+      <div class="pipe-node dimmed" onclick="litNodeA(this,'Client &mdash; sends requests. Its inter-arrival times are recorded to build a personal baseline over the first 150 requests.')">
+        <div class="pn-icon">&#x2328;</div><div class="pn-label">Client</div>
       </div>
       <div class="pipe-arrow"></div>
-      <div class="pipe-node dimmed">
-        <div class="pn-icon">&#x1F4CB;</div>
-        <div class="pn-label">Rule Engine</div>
-        <div class="pn-sub">Phase 1 passed</div>
+      <div class="pipe-node dimmed" onclick="litNodeA(this,'Rule Engine (Phase 1) &mdash; must pass all 5 checks before reaching here. Only clean requests get a Z-score.')">
+        <div class="pn-icon">&#x1F4CB;</div><div class="pn-label">Rule Engine</div><div class="pn-sub">Phase 1 passed</div>
       </div>
       <div class="pipe-arrow"></div>
-      <div class="pipe-node highlighted">
-        <div class="pn-icon">&#x1F4CA;</div>
-        <div class="pn-label">Anomaly Engine</div>
-        <div class="pn-sub">Phase 2</div>
+      <div class="pipe-node lit" onclick="litNodeA(this,'Anomaly Engine (you are here) &mdash; scores the request against this IP\'s sliding-window baseline using a modified Z-score. Flags requests that arrive much faster than the IP\'s own normal pace.')">
+        <div class="pn-icon">&#x1F4CA;</div><div class="pn-label">Anomaly Engine</div><div class="pn-sub">Phase 2</div>
       </div>
       <div class="pipe-arrow"></div>
-      <div class="pipe-node dimmed">
-        <div class="pn-icon">&#x1F6E1;</div>
-        <div class="pn-label">Mitigation</div>
-        <div class="pn-sub">Phase 3</div>
+      <div class="pipe-node dimmed" onclick="litNodeA(this,'Mitigation Controller &mdash; receives the anomaly verdict and decides: deprioritise, escalate, or allow. Manages the escalation strike counter.')">
+        <div class="pn-icon">&#x1F6E1;</div><div class="pn-label">Mitigation</div><div class="pn-sub">Phase 3</div>
       </div>
       <div class="pipe-arrow"></div>
-      <div class="pipe-node dimmed">
-        <div class="pn-icon">&#x2696;</div>
-        <div class="pn-label">Load Balancer</div>
+      <div class="pipe-node dimmed" onclick="litNodeA(this,'Load Balancer &mdash; receives only clean, non-anomalous requests that passed all three phases.')">
+        <div class="pn-icon">&#x2696;</div><div class="pn-label">Load Balancer</div>
       </div>
     </div>
+    <div id="pipe-tip-a" style="display:none;" class="highlight-box green"></div>
     <div class="highlight-box green">
       The Anomaly Engine only runs on requests that <b>passed all rule checks</b>.
-      This keeps detection layers independent &mdash; each flagged event is attributed to exactly one source.
-      It answers the question: <em>"This request looks valid, but is the client behaving normally?"</em>
+      Detection layers are independent &mdash; each flagged event is attributed to exactly one source.
+      It answers: <em>"This request looks valid on inspection, but is this client behaving normally?"</em>
     </div>
   </div>
 
-  <!-- Why this exists -->
+  <!-- Why rules aren't enough -->
   <div class="card">
-    <div class="card-title">Why rules alone aren't enough</div>
-    <div class="concept-grid">
-      <div class="concept-card">
-        <div class="cc-title">The gap in rule-based detection</div>
-        <div class="cc-body">
-          The rate limiter blocks IPs exceeding 200 req/10s. But what about an attacker sending 180 req/10s?
-          That's under the threshold &mdash; the rule engine sees nothing wrong.<br><br>
-          Or consider a legitimate client that normally sends 5 req/s suddenly jumping to 50 req/s.
-          Still under the rate limit, but a 10x change from their personal baseline is suspicious.
+    <div class="card-title">Why rules alone are insufficient &mdash; click each gap to expand</div>
+    <div>
+      <div class="concept-row" onclick="this.classList.toggle('open')">
+        <span class="cr-arrow">&#9658;</span>
+        <div>
+          <div class="cr-title">The threshold gap &mdash; what a rate limiter can't see</div>
+          <div class="cr-body">
+            The rate limiter blocks IPs exceeding 200 req/10s. But an attacker sending 180 req/10s is invisible to it.
+            Or consider a client that normally sends 5 req/s suddenly jumping to 50 req/s &mdash; still under the global limit,
+            but a 10&times; change from their personal baseline is suspicious.
+            The rule engine has no memory of past behaviour. The anomaly engine does.
+          </div>
         </div>
       </div>
-      <div class="concept-card">
-        <div class="cc-title">Per-IP baseline profiling</div>
-        <div class="cc-body">
-          For each IP, we maintain a sliding window (last 30 seconds) of:
-          <ul style="margin:8px 0 0 18px;">
-            <li><b>Inter-arrival times (IAT)</b> &mdash; gap between consecutive requests</li>
-            <li><b>Payload sizes</b> &mdash; raw body bytes per request</li>
-          </ul>
-          After 150 samples, each new request is scored against this IP's own baseline.
-          A client with stable 100ms IAT suddenly sending at 1ms IAT gets flagged &mdash;
-          even though the global rate limit hasn't been reached.
+      <div class="concept-row" onclick="this.classList.toggle('open')">
+        <span class="cr-arrow">&#9658;</span>
+        <div>
+          <div class="cr-title">Per-IP baseline profiling &mdash; each client gets their own threshold</div>
+          <div class="cr-body">
+            For each IP, a sliding window (last 30 seconds) tracks inter-arrival times (IAT) and payload sizes.
+            After 150 samples, every new request is scored against <em>this IP's own baseline</em> &mdash; not a global threshold.
+            A heavy API user and a light user have different baselines. An attacker impersonating a heavy user
+            still gets flagged if their <em>pattern</em> suddenly changes.
+          </div>
+        </div>
+      </div>
+      <div class="concept-row" onclick="this.classList.toggle('open')">
+        <span class="cr-arrow">&#9658;</span>
+        <div>
+          <div class="cr-title">Slow-rate limitation &mdash; what the anomaly engine also misses</div>
+          <div class="cr-body">
+            If an attacker sends requests slowly enough and consistently enough, the baseline adapts to include them.
+            Measured in experiments: during a slow-rate attack, the baseline median collapsed from ~100ms IAT to 4.34ms
+            within one 30s window cycle. Subsequent bursts scored Z&nbsp;&asymp;&nbsp;0.97, well below the threshold of 1.5.
+            Fix: freeze the baseline after warmup, or use a longer (&ge;120s) window.
+          </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Z-score explanation -->
+  <!-- Z-score formula + distribution chart -->
   <div class="card">
-    <div class="card-title">Modified Z-Score (Iglewicz &amp; Hoaglin, 1993)</div>
+    <div class="card-title">Modified Z-Score &mdash; click any highlighted term for its meaning</div>
     <div class="row-2">
       <div>
-        <div class="formula-box">
-          <span class="fm-comment"># Modified Z-score formula</span><br>
-          <span class="fm-keyword">Z</span> <span class="fm-op">=</span> <span class="fm-value">0.6745</span> <span class="fm-op">&times;</span> <span class="fm-op">|</span><span class="fm-keyword">x</span> <span class="fm-op">-</span> <span class="fm-keyword">median</span>(baseline)<span class="fm-op">|</span> <span class="fm-op">/</span> <span class="fm-keyword">MAD</span>(baseline)<br><br>
+        <div class="formula-wrap">
+          <span class="fm-comment"># Modified Z-score (Iglewicz &amp; Hoaglin, 1993)</span><br>
+          <span class="fm-term fm-z" onclick="explain('z')">Z</span>
+          <span class="fm-op"> = </span>
+          <span class="fm-term fm-k" onclick="explain('k')">0.6745</span>
+          <span class="fm-op"> &times; |</span><span class="fm-term fm-x" onclick="explain('x')">x</span>
+          <span class="fm-op"> &minus; </span><span class="fm-term fm-med" onclick="explain('med')">median(baseline)</span>
+          <span class="fm-op">| / </span><span class="fm-term fm-mad" onclick="explain('mad')">MAD(baseline)</span><br><br>
           <span class="fm-comment"># Where MAD = Median Absolute Deviation</span><br>
-          <span class="fm-keyword">MAD</span> <span class="fm-op">=</span> <span class="fm-keyword">median</span>(<span class="fm-op">|</span>x<sub>i</sub> <span class="fm-op">-</span> <span class="fm-keyword">median</span>(X)<span class="fm-op">|</span>)<br><br>
-          <span class="fm-comment"># 0.6745 normalises MAD to match standard deviation under normality</span><br>
-          <span class="fm-comment"># Threshold: Z &gt; <span class="fm-value">1.5</span> &rarr; flagged as anomalous</span>
+          <span class="fm-term fm-mad" onclick="explain('mad')">MAD</span>
+          <span class="fm-op"> = median( |x<sub style="color:#a5b4fc">i</sub> &minus; </span>
+          <span class="fm-term fm-med" onclick="explain('med')">median(X)</span>
+          <span class="fm-op">| )</span><br><br>
+          <span class="fm-comment"># Flag condition</span><br>
+          <span class="fm-term fm-z" onclick="explain('z')">Z</span>
+          <span class="fm-op"> &gt; </span>
+          <span class="fm-val">1.5</span>
+          <span class="fm-op"> AND </span>
+          <span class="fm-term fm-x" onclick="explain('dir')">x &lt; median</span>
+          <span class="fm-op"> (IAT acceleration) &rarr; flag</span>
         </div>
+        <div id="formula-explain"></div>
         <div style="margin-top:14px; font-size:13px; color:var(--muted); line-height:1.7;">
-          <b>Why modified Z-score instead of standard Z-score?</b><br>
-          Standard Z-score uses mean and standard deviation, which are heavily influenced by outliers.
-          A single burst request would shift the mean and inflate the std dev, making subsequent burst requests
-          look less anomalous. The modified version uses median and MAD, which are <b>robust to outliers</b> &mdash;
-          the baseline stays stable even when attack traffic is mixed in.
+          <b>Why modified Z-score?</b> Standard Z uses mean and std dev, which are
+          shifted by outliers. A single burst would widen the std dev, making the next burst look less anomalous.
+          Median and MAD are <b>robust to outliers</b> &mdash; the baseline stays stable even when attack traffic mixes in.
         </div>
       </div>
       <div>
-        <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:8px;">
-          IAT Distribution: baseline vs. burst
+        <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:8px;">IAT distribution: baseline vs. burst</div>
+        <canvas id="iat-canvas" width="300" height="160" style="border-radius:8px; border:1px solid var(--border); width:100%;"></canvas>
+        <div class="iat-legend">
+          <span><span class="iat-legend-dot" style="background:#93c5fd"></span>Baseline IAT (~100ms)</span>
+          <span><span class="iat-legend-dot" style="background:#fca5a5"></span>Burst IAT (~1ms) &mdash; Z&nbsp;&gt;&nbsp;1.5</span>
         </div>
-        <div class="zscore-visual" id="zscore-viz">
-          <!-- Generated by JS -->
-        </div>
-        <div style="display:flex; justify-content:space-between; margin-top:24px;">
-          <div style="display:flex; align-items:center; gap:6px;">
-            <div style="width:12px;height:12px;border-radius:2px;background:#dbeafe;"></div>
-            <span style="font-size:11px; color:var(--muted);">Baseline IAT (~100ms)</span>
+        <div style="margin-top:18px;">
+          <div class="decisions-grid">
+            <div class="decision-row" onclick="this.classList.toggle('open')">
+              <span class="dr-arrow">&#9658;</span>
+              <div>
+                <div class="dr-key">Directional scoring</div>
+                <div class="dr-short">Only faster-than-baseline is flagged</div>
+                <div class="dr-detail">A long pause between requests (high IAT) is not an attack — it might be the client thinking or rate-limiting itself. Only when IAT is shorter than the baseline median is the request scored. The condition is <code>x &lt; median(baseline)</code>.</div>
+              </div>
+            </div>
+            <div class="decision-row" onclick="this.classList.toggle('open')">
+              <span class="dr-arrow">&#9658;</span>
+              <div>
+                <div class="dr-key">IAT-only weighting</div>
+                <div class="dr-short">Payload Z-score computed but weighted 0%</div>
+                <div class="dr-detail">Different task types have naturally different payload sizes. Scoring payload size would generate false positives whenever a client changes task type. IAT, however, is task-type-independent — it measures request pace, not content.</div>
+              </div>
+            </div>
+            <div class="decision-row" onclick="this.classList.toggle('open')">
+              <span class="dr-arrow">&#9658;</span>
+              <div>
+                <div class="dr-key">150-sample warmup</div>
+                <div class="dr-short">No scoring until baseline is stable</div>
+                <div class="dr-detail">Computing a Z-score from 2 samples is meaningless. 150 samples at ~10 req/s takes ~15 seconds. Flood IPs (blocked at 200 req/10s) never accumulate 150 samples before being blocked, so the warmup guard is effectively only relevant for slow-rate anomaly detection.</div>
+              </div>
+            </div>
+            <div class="decision-row" onclick="this.classList.toggle('open')">
+              <span class="dr-arrow">&#9658;</span>
+              <div>
+                <div class="dr-key">30-second sliding window</div>
+                <div class="dr-short">Baseline adapts to legitimate rate changes</div>
+                <div class="dr-detail">If a legitimate client doubles their request rate permanently, the baseline adapts within 30 seconds and stops flagging them. This prevents false positives for natural usage changes. The tradeoff: sustained slow-rate attacks can contaminate the baseline within the same window.</div>
+              </div>
+            </div>
           </div>
-          <div style="display:flex; align-items:center; gap:6px;">
-            <div style="width:12px;height:12px;border-radius:2px;background:#fca5a5;"></div>
-            <span style="font-size:11px; color:var(--muted);">Burst IAT (~1ms) &mdash; Z-score &gt; 1.5</span>
-          </div>
-        </div>
-
-        <div style="margin-top:20px;">
-          <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:8px;">Key design decisions</div>
-          <table>
-            <tbody>
-              <tr>
-                <td style="font-weight:600; white-space:nowrap;">Directional scoring</td>
-                <td style="color:var(--muted)">Only flags faster-than-baseline IAT. A pause (long IAT) is not an attack.</td>
-              </tr>
-              <tr>
-                <td style="font-weight:600; white-space:nowrap;">IAT-only weighting</td>
-                <td style="color:var(--muted)">Payload Z-score computed but weighted 0% &mdash; task types have naturally different sizes.</td>
-              </tr>
-              <tr>
-                <td style="font-weight:600; white-space:nowrap;">150-sample warmup</td>
-                <td style="color:var(--muted)">No scoring until baseline is stable. Flood IPs (blocked at 200) never warm up.</td>
-              </tr>
-              <tr>
-                <td style="font-weight:600; white-space:nowrap;">30s sliding window</td>
-                <td style="color:var(--muted)">Baseline adapts to legitimate rate changes within 30 seconds.</td>
-              </tr>
-            </tbody>
-          </table>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- Baseline status + demo -->
+  <!-- Baseline status -->
   <div class="card">
     <div class="card-title">Live baseline status &amp; burst demo</div>
-
-    <div class="baseline-status" id="baseline-box">
+    <div class="bs-strip" id="baseline-box">
       <div class="bs-dot warming" id="bs-dot"></div>
       <div>
-        <div style="font-size:13px; font-weight:600;" id="bs-label">Checking baseline status...</div>
+        <div style="font-size:13px; font-weight:600;" id="bs-label">Checking baseline...</div>
         <div style="font-size:12px; color:var(--muted);" id="bs-detail">Background traffic runs automatically from system start</div>
       </div>
     </div>
-
-    <div style="margin-top:16px; display:flex; gap:12px; align-items:center;">
-      <button class="btn btn-green" onclick="burstDemo()" id="btn-burst">Trigger Burst Attack</button>
-      <span style="font-size:12px; color:var(--muted);">
-        Sends 50 concurrent requests from the baseline IP &mdash; IAT drops from ~100ms to &lt;1ms
-      </span>
+    <div style="margin-top:14px; display:flex; gap:12px; align-items:center;">
+      <button class="btn btn-green" onclick="burstDemo()">Trigger Burst Attack</button>
+      <span style="font-size:12px; color:var(--muted);">Sends 50 concurrent requests &mdash; IAT drops from ~100ms to &lt;1ms, watch Z-score spike</span>
     </div>
-
-    <div id="anomaly-demo-status" style="margin-top:12px;">
-      The anomaly baseline builds automatically in the background at ~10 req/s.
-      Once 150 samples are collected (~15s after startup), the burst demo will trigger real detections.
+    <div id="anomaly-demo-status" style="margin-top:10px; font-size:13px; color:var(--muted); padding:10px 14px; background:var(--bg); border:1px solid var(--border); border-radius:6px; min-height:36px;">
+      Baseline builds automatically at ~10 req/s. Once 150 samples are collected (~15s), the burst demo triggers real detections.
     </div>
   </div>
 
   <!-- Live Z-score stats -->
   <div class="card">
-    <div class="card-title">Live Z-score ring buffer &mdash; last 200 scored requests from demo IP</div>
+    <div class="card-title">Live Z-score ring buffer &mdash; last 200 scored requests from demo IP (10.10.0.4)</div>
     <p style="font-size:13px; color:var(--muted); margin-bottom:4px;">
-      These numbers are the actual IAT Z-scores the anomaly engine computed during the most recent activity from the demo IP (10.10.0.4).
-      After a burst attack, you will see the max Z-score spike above&nbsp;1.5 and the above-threshold count increase.
-      After the slow-rate experiment, mean&nbsp;=&nbsp;0.304, max&nbsp;=&nbsp;1.171 &mdash; demonstrating baseline contamination in real data.
+      After a burst attack, max Z-score spikes above 1.5 and above-threshold count increases.
+      After the slow-rate experiment, mean&nbsp;=&nbsp;0.304, max&nbsp;=&nbsp;1.171 &mdash; demonstrating baseline contamination in real measurements.
     </p>
     <div id="zscore-live-panel">
       <p style="font-size:13px; color:var(--muted); margin-top:10px;">Waiting for data...</p>
@@ -271,116 +316,166 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-  // ── Z-score visualization ──────────────────────────────────────────────────
-  (function() {
-    const viz = document.getElementById('zscore-viz');
-    // Simulate IAT distribution: baseline around 100ms, burst around 1ms
-    const bars = [];
-    // Baseline distribution (normal-ish around 100ms)
-    for (let i = 0; i < 30; i++) {
-      const iat = 60 + Math.random() * 80; // 60-140ms
-      bars.push({ value: iat, type: 'baseline' });
-    }
-    // Burst cluster (sub-ms)
-    for (let i = 0; i < 8; i++) {
-      const iat = 0.5 + Math.random() * 2; // 0.5-2.5ms
-      bars.push({ value: iat, type: 'anomaly' });
-    }
-    bars.sort((a, b) => a.value - b.value);
+// ── Pipeline node highlight ────────────────────────────────────────────────
+function litNodeA(el, tip) {
+  document.querySelectorAll('.pipe-node').forEach(n => { n.classList.remove('lit'); n.classList.add('dimmed'); });
+  el.classList.remove('dimmed'); el.classList.add('lit');
+  const box = document.getElementById('pipe-tip-a');
+  box.innerHTML = tip; box.style.display = 'block';
+}
 
-    const maxVal = Math.max(...bars.map(b => b.value));
-    bars.forEach(b => {
-      const el = document.createElement('div');
-      el.className = 'zbar ' + b.type;
-      el.style.height = Math.max(4, (b.value / maxVal) * 100) + '%';
-      if (b.type === 'anomaly') el.style.height = '4%'; // tiny bars for burst
-      viz.appendChild(el);
-    });
-  })();
+// ── Formula term explanations ──────────────────────────────────────────────
+const TERMS = {
+  z:   { color:'#93c5fd', text:'Z — the modified Z-score for this request. Values above 1.5 AND below the baseline median trigger a deprioritise action. The threshold 1.5 was chosen to balance sensitivity against jitter false positives.' },
+  k:   { color:'#86efac', text:'0.6745 — the normalisation constant. Under a normal distribution, 0.6745 × MAD equals one standard deviation. This makes the modified Z-score comparable to a standard Z-score for normally distributed data.' },
+  x:   { color:'#f9a8d4', text:'x — the inter-arrival time of the current request (seconds). Calculated as the timestamp difference between this request and the previous one from the same IP. Sub-millisecond values indicate concurrent burst traffic.' },
+  med: { color:'#fde68a', text:'median(baseline) — the median IAT across all samples in the 30-second sliding window. Robust to outliers: a few very fast or very slow requests don\'t shift it significantly, unlike a mean.' },
+  mad: { color:'#a5b4fc', text:'MAD (Median Absolute Deviation) — median of |x_i - median(X)| over the baseline window. Describes the spread of the distribution without being inflated by outliers. A small MAD means the baseline is tight; a large MAD means it\'s variable.' },
+  dir: { color:'#fca5a5', text:'x < median — directional guard. We only flag requests that arrive faster than the baseline median (smaller IAT = shorter gap = faster). A slow request (longer IAT) is not an attack, so requests with x > median score Z = 0 regardless.' },
+};
 
-  // ── Baseline status polling ────────────────────────────────────────────────
-  // Demo anomaly IP (must match DEMO_IPS["anomaly"] in server.py)
-  const ANOMALY_DEMO_IP = '10.10.0.4';
-
-  async function checkBaseline() {
-    const dot    = document.getElementById('bs-dot');
-    const label  = document.getElementById('bs-label');
-    const detail = document.getElementById('bs-detail');
-    try {
-      const snap = await (await fetch('/api/anomaly_snapshot')).json();
-      const ipData  = snap[ANOMALY_DEMO_IP] || {};
-      const warmed  = ipData.warmed_up  || false;
-      const samples = ipData.samples    || 0;
-      const zstats  = ipData.zscore_stats || {};
-
-      if (warmed) {
-        dot.className = 'bs-dot ready';
-        label.textContent = 'Baseline ready \u2014 anomaly scoring is active';
-        detail.textContent = `${samples} samples in current window`;
-      } else {
-        dot.className = 'bs-dot warming';
-        label.textContent = `Warming up \u2014 ${samples} / 150 samples`;
-        detail.textContent = 'Background traffic is building the per-IP baseline automatically';
-      }
-
-      // Update live Z-score stats panel if it exists
-      const panel = document.getElementById('zscore-live-panel');
-      if (panel) {
-        if (zstats.observations > 0) {
-          panel.innerHTML = `
-            <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:10px;">
-              <div style="text-align:center; padding:12px; background:var(--bg); border-radius:8px; border:1px solid var(--border);">
-                <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Z-score mean</div>
-                <div style="font-size:28px; font-weight:700; color:${zstats.iat_z_mean > 1.5 ? 'var(--block)' : 'var(--allow)'}">${zstats.iat_z_mean.toFixed(3)}</div>
-              </div>
-              <div style="text-align:center; padding:12px; background:var(--bg); border-radius:8px; border:1px solid var(--border);">
-                <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Z-score max</div>
-                <div style="font-size:28px; font-weight:700; color:${zstats.iat_z_max > 1.5 ? 'var(--block)' : 'var(--text)'}">${zstats.iat_z_max.toFixed(3)}</div>
-              </div>
-              <div style="text-align:center; padding:12px; background:var(--bg); border-radius:8px; border:1px solid var(--border);">
-                <div style="font-size:11px; color:var(--muted); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:4px;">Above threshold</div>
-                <div style="font-size:28px; font-weight:700; color:${zstats.iat_z_above_threshold > 0 ? 'var(--block)' : 'var(--allow)'}">${zstats.iat_z_above_threshold}</div>
-              </div>
-            </div>
-            <div style="margin-top:10px; font-size:12px; color:var(--muted); padding:8px 12px; background:var(--bg); border-radius:6px; border:1px solid var(--border);">
-              Baseline at scoring time &mdash; median: <b>${zstats.baseline_median_ms} ms</b> &nbsp; MAD: <b>${zstats.baseline_mad_ms} ms</b>
-              &nbsp;&nbsp; threshold: <b>${zstats.threshold}</b>
-              &nbsp;&nbsp; observations in ring: <b>${zstats.observations}</b>
-            </div>`;
-        } else if (warmed) {
-          panel.innerHTML = '<p style="font-size:13px; color:var(--muted); margin-top:10px;">No scored requests yet &mdash; trigger a burst to see Z-score data.</p>';
-        } else {
-          panel.innerHTML = '<p style="font-size:13px; color:var(--muted); margin-top:10px;">Waiting for warmup to complete before scoring begins.</p>';
-        }
-      }
-    } catch (e) {
-      label.textContent = 'Cannot reach IDMS';
-    }
+let activeTerm = null;
+function explain(key) {
+  const panel = document.getElementById('formula-explain');
+  const t = TERMS[key];
+  document.querySelectorAll('.fm-term').forEach(el => el.classList.remove('active'));
+  event.target.classList.add('active');
+  if (activeTerm === key) {
+    panel.classList.remove('show'); activeTerm = null; return;
   }
-  checkBaseline();
-  const _bsInterval = setInterval(checkBaseline, 3000);
-  window.addEventListener('beforeunload', () => clearInterval(_bsInterval));
+  panel.innerHTML = `<span style="color:${t.color}; font-weight:700;">&#9654; </span>${t.text}`;
+  panel.classList.add('show');
+  activeTerm = key;
+}
 
-  // ── Burst demo ─────────────────────────────────────────────────────────────
-  async function burstDemo() {
-    const el = document.getElementById('anomaly-demo-status');
-    el.textContent = 'Sending 50 concurrent burst requests\u2026';
-    el.style.color = '#2563eb';
+// ── IAT distribution chart ─────────────────────────────────────────────────
+(function() {
+  const cv  = document.getElementById('iat-canvas');
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
 
-    try {
-      const r = await fetch('/api/demo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'burst' }),
-      });
-      const d = await r.json();
-      el.textContent = d.message || 'Done.';
-      el.style.color = '#16a34a';
-    } catch (e) {
-      el.textContent = 'Error: ' + e.message;
-      el.style.color = '#dc2626';
-    }
+  // Baseline: normally distributed around 100ms
+  const baseline = [];
+  for (let i = 0; i < 60; i++) {
+    const v = 60 + Math.random() * 80; // 60–140ms
+    baseline.push(v);
   }
+  // Burst: sub-ms
+  const burst = [];
+  for (let i = 0; i < 8; i++) burst.push(0.5 + Math.random() * 2);
+
+  const allVals = [...baseline, ...burst];
+  const maxV = Math.max(...allVals);
+  const barW = (W - 20) / allVals.length;
+
+  ctx.clearRect(0, 0, W, H);
+
+  // Threshold line at 1.5 Z ≈ low IAT
+  // Sort all for histogram-like display
+  const bSorted = [...baseline].sort((a,b)=>a-b);
+  const buSorted = [...burst].sort((a,b)=>a-b);
+
+  bSorted.forEach((v, i) => {
+    const x = 10 + i * (W - 20) / bSorted.length;
+    const h = Math.max(3, (v / maxV) * (H - 24));
+    ctx.fillStyle = '#93c5fd66';
+    ctx.fillRect(x, H - 20 - h, (W-20)/bSorted.length - 1, h);
+    ctx.fillStyle = '#93c5fd';
+    ctx.fillRect(x, H - 20 - h, (W-20)/bSorted.length - 1, 3);
+  });
+
+  buSorted.forEach((v, i) => {
+    const x = 10 + i * 8;
+    const h = 6;
+    ctx.fillStyle = '#fca5a5';
+    ctx.fillRect(x, H - 20 - h, 6, h);
+  });
+
+  // Threshold annotation
+  ctx.setLineDash([4, 3]);
+  ctx.strokeStyle = '#ef4444';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.moveTo(10, H - 22); ctx.lineTo(70, H - 22); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#ef4444';
+  ctx.font = '9px sans-serif';
+  ctx.fillText('burst zone (Z > 1.5)', 12, H - 24);
+
+  // X-axis label
+  ctx.fillStyle = '#9ca3af'; ctx.font = '9px sans-serif';
+  ctx.textAlign = 'right'; ctx.fillText('IAT (ms) →', W - 4, H - 5);
+})();
+
+// ── Baseline status polling ────────────────────────────────────────────────
+const ANOMALY_DEMO_IP = '10.10.0.4';
+
+async function checkBaseline() {
+  const dot    = document.getElementById('bs-dot');
+  const label  = document.getElementById('bs-label');
+  const detail = document.getElementById('bs-detail');
+  try {
+    const snap   = await (await fetch('/api/anomaly_snapshot')).json();
+    const ipData = snap[ANOMALY_DEMO_IP] || {};
+    const warmed = ipData.warmed_up  || false;
+    const samples= ipData.samples    || 0;
+    const zstats = ipData.zscore_stats || {};
+
+    if (warmed) {
+      dot.className = 'bs-dot ready';
+      label.textContent = 'Baseline ready \u2014 anomaly scoring active';
+      detail.textContent = `${samples} samples in current window`;
+    } else {
+      dot.className = 'bs-dot warming';
+      label.textContent = `Warming up \u2014 ${samples} / 150 samples`;
+      detail.textContent = 'Background traffic builds the baseline automatically';
+    }
+
+    const panel = document.getElementById('zscore-live-panel');
+    if (zstats.observations > 0) {
+      const meanColor = zstats.iat_z_mean  > 1.5 ? 'var(--block)' : 'var(--allow)';
+      const maxColor  = zstats.iat_z_max   > 1.5 ? 'var(--block)' : 'var(--text)';
+      const abvColor  = zstats.iat_z_above_threshold > 0 ? 'var(--block)' : 'var(--allow)';
+      panel.innerHTML = `
+        <div class="zsp-grid">
+          <div class="zsp-cell">
+            <div class="zsp-label">Z-score mean</div>
+            <div class="zsp-value" style="color:${meanColor}">${zstats.iat_z_mean.toFixed(3)}</div>
+          </div>
+          <div class="zsp-cell">
+            <div class="zsp-label">Z-score max</div>
+            <div class="zsp-value" style="color:${maxColor}">${zstats.iat_z_max.toFixed(3)}</div>
+          </div>
+          <div class="zsp-cell">
+            <div class="zsp-label">Above threshold</div>
+            <div class="zsp-value" style="color:${abvColor}">${zstats.iat_z_above_threshold}</div>
+          </div>
+        </div>
+        <div style="margin-top:10px; font-size:12px; color:var(--muted); padding:8px 12px; background:var(--bg); border-radius:6px; border:1px solid var(--border);">
+          Baseline at scoring time &mdash; median: <b>${zstats.baseline_median_ms} ms</b> &nbsp; MAD: <b>${zstats.baseline_mad_ms} ms</b>
+          &nbsp;|&nbsp; threshold: <b>${zstats.threshold}</b> &nbsp;|&nbsp; observations: <b>${zstats.observations}</b>
+        </div>`;
+    } else if (warmed) {
+      panel.innerHTML = '<p style="font-size:13px;color:var(--muted);margin-top:10px;">No scored requests yet &mdash; trigger a burst to see Z-score data.</p>';
+    } else {
+      panel.innerHTML = '<p style="font-size:13px;color:var(--muted);margin-top:10px;">Waiting for warmup to complete.</p>';
+    }
+  } catch(e) { label.textContent = 'Cannot reach IDMS'; }
+}
+checkBaseline();
+const _bsInt = setInterval(checkBaseline, 3000);
+window.addEventListener('beforeunload', () => clearInterval(_bsInt));
+
+// ── Burst demo ─────────────────────────────────────────────────────────────
+async function burstDemo() {
+  const el = document.getElementById('anomaly-demo-status');
+  el.textContent = 'Sending 50 concurrent burst requests\u2026'; el.style.color = '#2563eb';
+  try {
+    const r = await fetch('/api/demo', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({type:'burst'}) });
+    const d = await r.json();
+    el.textContent = d.message || 'Done.'; el.style.color = '#16a34a';
+  } catch(e) { el.textContent = 'Error: ' + e.message; el.style.color = '#dc2626'; }
+}
 </script>
 {% endblock %}

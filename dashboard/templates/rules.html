@@ -2,94 +2,137 @@
 {% block title %}Rule Engine — IDMS Dashboard{% endblock %}
 
 {% block extra_css %}
-/* ── Architecture with highlight ── */
-.arch-pipeline {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0;
-  padding: 24px 0;
+/* ── Pipeline ── */
+.pipe-row {
+  display: flex; align-items: center; justify-content: center;
+  gap: 0; padding: 20px 0; flex-wrap: nowrap;
 }
 .pipe-node {
-  text-align: center;
-  padding: 14px 20px;
-  border-radius: 10px;
-  border: 2px solid var(--border);
-  background: var(--card);
-  min-width: 120px;
-  transition: all 0.3s;
+  text-align: center; padding: 12px 18px; border-radius: 10px;
+  border: 2px solid var(--border); background: var(--card);
+  min-width: 110px; cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s;
+  position: relative;
 }
-.pipe-node .pn-icon { font-size: 24px; margin-bottom: 4px; }
-.pipe-node .pn-label { font-size: 12px; font-weight: 600; color: var(--text); }
-.pipe-node .pn-sub   { font-size: 11px; color: var(--muted); }
-.pipe-node.highlighted {
+.pipe-node:hover { border-color: var(--accent); }
+.pipe-node.lit {
   border-color: var(--p1);
-  background: #f5f3ff;
   box-shadow: 0 0 0 4px rgba(124,58,237,0.1);
+  background: #f5f3ff;
 }
-.pipe-node.dimmed { opacity: 0.4; }
+.pipe-node.dimmed { opacity: 0.35; }
+.pipe-node .pn-icon  { font-size: 22px; margin-bottom: 4px; }
+.pipe-node .pn-label { font-size: 12px; font-weight: 600; color: var(--text); }
+.pipe-node .pn-sub   { font-size: 10px; color: var(--muted); }
 .pipe-arrow {
-  width: 40px; height: 2px; background: var(--border); position: relative; margin: 0 -2px;
+  width: 36px; height: 2px; background: var(--border); position: relative; margin: 0 -1px;
+  flex-shrink: 0;
 }
 .pipe-arrow::after {
   content: ''; position: absolute; right: -5px; top: -4px;
   border: 5px solid transparent; border-left: 6px solid var(--border);
 }
 
-/* ── Rule cards ── */
-.rule-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.rule-card {
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  padding: 18px 22px;
-  background: var(--card);
-  border-left: 4px solid var(--border);
+/* ── Priority ladder ── */
+.rule-ladder { display: flex; flex-direction: column; gap: 8px; }
+.rule-rung {
+  border: 1px solid var(--border); border-radius: 10px;
+  overflow: hidden; cursor: pointer; transition: border-color 0.15s;
 }
-.rule-card .rc-header {
-  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+.rule-rung:hover   { border-color: #c4b5fd; }
+.rule-rung.open    { border-color: var(--p1); }
+.rule-rung.r-pass  { border-left: 4px solid var(--allow); }
+.rule-rung.r-pass.open { border-color: var(--allow); }
+.rung-hdr {
+  display: flex; align-items: center; gap: 12px; padding: 12px 16px;
+  background: var(--bg); user-select: none;
 }
-.rule-card .rc-name { font-size: 14px; font-weight: 700; color: var(--text); }
-.rule-card .rc-desc { font-size: 13px; color: var(--muted); line-height: 1.6; }
-.rule-card .rc-config {
-  margin-top: 10px; padding-top: 10px; border-top: 1px solid #f0f2f5;
-  font-size: 12px; color: var(--text); font-family: 'SF Mono', 'Consolas', monospace;
+.rung-num {
+  font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 4px;
+  white-space: nowrap; color: #fff; flex-shrink: 0;
 }
-.rc-auth    { border-left-color: var(--block); }
-.rc-sqli    { border-left-color: var(--honeypot); }
-.rc-rate    { border-left-color: var(--p1); }
-.rc-scan    { border-left-color: var(--deprio); }
-.rc-payload { border-left-color: var(--muted); }
+.rung-name  { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
+.rung-badge {
+  font-size: 11px; padding: 2px 10px; border-radius: 20px;
+  font-weight: 600; white-space: nowrap; flex-shrink: 0;
+}
+.rung-arrow { color: var(--muted); font-size: 11px; transition: transform 0.2s; flex-shrink: 0; }
+.rule-rung.open .rung-arrow { transform: rotate(90deg); color: var(--p1); }
+.rule-rung.r-pass.open .rung-arrow { color: var(--allow); }
+.rung-body {
+  display: none; padding: 16px 18px; background: var(--card);
+  border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); line-height: 1.7;
+}
+.rule-rung.open .rung-body { display: block; }
+.rung-config {
+  margin-top: 10px; padding: 8px 12px;
+  background: var(--bg); border-radius: 6px; border: 1px solid var(--border);
+  font-size: 12px; font-family: 'SF Mono','Consolas',monospace; color: var(--text); line-height: 1.8;
+}
 
-/* ── Demo section ── */
-.demo-row-inline {
-  display: flex; align-items: center; gap: 16px; padding: 14px 18px;
+/* ── Interactive trace ── */
+.trace-scene {
+  display: flex; gap: 0; overflow-x: auto;
+}
+.trace-cell {
+  flex: 1; min-width: 90px; padding: 14px 10px; text-align: center;
+  border: 1px solid var(--border); background: var(--card);
+  font-size: 12px; position: relative; transition: background 0.3s, border-color 0.3s;
+}
+.trace-cell:first-child { border-radius: 8px 0 0 8px; }
+.trace-cell:last-child  { border-radius: 0 8px 8px 0; }
+.trace-cell .tc-icon  { font-size: 20px; margin-bottom: 6px; }
+.trace-cell .tc-label { font-weight: 600; color: var(--text); margin-bottom: 2px; }
+.trace-cell .tc-val   { font-size: 11px; color: var(--muted); line-height: 1.4; min-height: 28px; }
+.trace-cell.t-pending {}
+.trace-cell.t-pass {
+  background: #f0fdf4 !important; border-color: #86efac !important;
+}
+.trace-cell.t-fail {
+  background: #fef2f2 !important; border-color: #fca5a5 !important;
+}
+.trace-cell.t-honey {
+  background: #fff7ed !important; border-color: #fed7aa !important;
+}
+.trace-cell.t-skip { opacity: 0.3; }
+@keyframes cell-flash {
+  0%  { transform: scale(1);    }
+  40% { transform: scale(1.04); }
+  100%{ transform: scale(1);    }
+}
+.trace-cell.t-pass, .trace-cell.t-fail, .trace-cell.t-honey {
+  animation: cell-flash 0.35s ease;
+}
+
+.trace-btns {
+  display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;
+}
+.trace-btn {
+  border: 1px solid var(--border); background: var(--bg);
+  border-radius: 8px; padding: 8px 16px; font-size: 12px; font-weight: 600;
+  cursor: pointer; font-family: inherit; color: var(--muted); transition: all 0.15s;
+}
+.trace-btn:hover { border-color: var(--p1); color: var(--p1); background: #f5f3ff; }
+.trace-btn.active { background: var(--p1); border-color: var(--p1); color: #fff; }
+#trace-caption {
+  margin-top: 10px; font-size: 13px; color: var(--muted);
+  padding: 8px 14px; background: var(--bg); border-radius: 6px;
+  border: 1px solid var(--border); min-height: 36px; line-height: 1.6;
+}
+
+/* ── Live test ── */
+.test-row {
+  display: flex; align-items: center; gap: 14px; padding: 12px 16px;
   border: 1px solid var(--border); border-radius: 8px; background: var(--bg);
+  margin-bottom: 8px;
 }
-.demo-row-inline .dri-label { font-size: 13px; font-weight: 600; color: var(--text); min-width: 140px; }
-.demo-row-inline .dri-desc  { font-size: 12px; color: var(--muted); flex: 1; }
+.test-row .tr-label { font-size: 13px; font-weight: 600; color: var(--text); min-width: 130px; }
+.test-row .tr-desc  { font-size: 12px; color: var(--muted); flex: 1; }
 
-#rules-demo-status {
+#rules-status {
   font-size: 13px; color: var(--muted); padding: 10px 14px;
-  background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
-  min-height: 38px; line-height: 1.5;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px; min-height: 36px; line-height: 1.5; margin-top: 8px;
 }
-
-/* ── Request trace ── */
-.trace-box {
-  display: flex; gap: 0; align-items: stretch; margin-top: 10px;
-}
-.trace-step {
-  flex: 1; padding: 12px 14px; text-align: center;
-  border: 1px solid var(--border); font-size: 12px; position: relative;
-  background: var(--card);
-}
-.trace-step:first-child { border-radius: 8px 0 0 8px; }
-.trace-step:last-child  { border-radius: 0 8px 8px 0; }
-.trace-step .ts-label { font-weight: 600; color: var(--text); margin-bottom: 2px; }
-.trace-step .ts-value { color: var(--muted); }
-.trace-step.pass { background: #f0fdf4; border-color: #bbf7d0; }
-.trace-step.fail { background: #fef2f2; border-color: #fecaca; }
-.trace-step .ts-icon { font-size: 16px; }
 {% endblock %}
 
 {% block body %}
@@ -97,192 +140,219 @@
 
   <div class="page-header">
     <h2>Rule Engine <span style="color:var(--p1)">(Phase 1)</span></h2>
-    <p>Stateless pattern matching &mdash; every request is checked against 6 rule categories in priority order</p>
+    <p>Stateless pattern matching &mdash; every request is checked against 5 rule categories in strict priority order</p>
   </div>
 
-  <!-- Pipeline position -->
+  <!-- Pipeline -->
   <div class="card">
-    <div class="card-title">Position in the pipeline</div>
-    <div class="arch-pipeline">
-      <div class="pipe-node dimmed">
-        <div class="pn-icon">&#x1F4BB;</div>
+    <div class="card-title">Position in the pipeline &mdash; click a stage to highlight it</div>
+    <div class="pipe-row">
+      <div class="pipe-node dimmed" onclick="litNode(this,'Client — sends requests to IDMS on port 5001. Its IP is tracked for rate limiting and anomaly scoring.')">
+        <div class="pn-icon">&#x2328;</div>
         <div class="pn-label">Client</div>
       </div>
       <div class="pipe-arrow"></div>
-      <div class="pipe-node dimmed">
+      <div class="pipe-node dimmed" onclick="litNode(this,'IDMS Proxy — intercepts the request, extracts client IP from X-Forwarded-For, and passes it into the pipeline.')">
         <div class="pn-icon">&#x1F6E1;</div>
         <div class="pn-label">IDMS Proxy</div>
         <div class="pn-sub">intercepts</div>
       </div>
       <div class="pipe-arrow"></div>
-      <div class="pipe-node highlighted">
+      <div class="pipe-node lit" onclick="litNode(this,'Rule Engine (you are here) — checks auth, injection, rate, scan, and payload in priority order. Short-circuits on first match.')">
         <div class="pn-icon">&#x1F4CB;</div>
         <div class="pn-label">Rule Engine</div>
         <div class="pn-sub">Phase 1</div>
       </div>
       <div class="pipe-arrow"></div>
-      <div class="pipe-node dimmed">
+      <div class="pipe-node dimmed" onclick="litNode(this,'Anomaly Engine — only reached if ALL rule checks pass. Scores the request against a per-IP statistical baseline.')">
         <div class="pn-icon">&#x1F4CA;</div>
         <div class="pn-label">Anomaly Engine</div>
-        <div class="pn-sub">Phase 2</div>
+        <div class="pn-sub">Phase 2 (if clean)</div>
       </div>
       <div class="pipe-arrow"></div>
-      <div class="pipe-node dimmed">
+      <div class="pipe-node dimmed" onclick="litNode(this,'Load Balancer — only reached if the request passes both rule and anomaly checks. Distributes to backend servers.')">
         <div class="pn-icon">&#x2696;</div>
         <div class="pn-label">Load Balancer</div>
       </div>
     </div>
-    <div class="highlight-box purple">
-      The Rule Engine runs <b>first</b> on every request. It checks rules in strict priority order and short-circuits on the first match &mdash;
-      an unauthenticated request is blocked immediately without ever reaching SQL injection checks or rate limiting.
+    <div id="pipe-tip" class="highlight-box purple" style="display:none; font-size:13px;"></div>
+    <div class="highlight-box purple" style="font-size:13px;">
+      The Rule Engine runs <b>first</b> on every request, in strict priority order.
+      It short-circuits on the first match &mdash; an unauthenticated request never reaches the injection check.
       If no rule fires, the request passes to the Anomaly Engine.
     </div>
   </div>
 
-  <!-- Rules -->
+  <!-- Priority ladder -->
   <div class="card">
-    <div class="card-title">Detection rules (checked in priority order)</div>
-    <div class="rule-grid">
+    <div class="card-title">Detection rules &mdash; click any row to expand</div>
+    <div class="rule-ladder">
 
-      <div class="rule-card rc-auth">
-        <div class="rc-header">
-          <span class="badge badge-red">PRIORITY 1</span>
-          <span class="rc-name">API Key Validation</span>
+      <div class="rule-rung" onclick="this.classList.toggle('open')">
+        <div class="rung-hdr">
+          <span class="rung-num" style="background:#dc2626">P1</span>
+          <span class="rung-name">API Key Validation</span>
+          <span class="rung-badge" style="background:#fee2e2;color:#dc2626">Block</span>
+          <span class="rung-arrow">&#9658;</span>
         </div>
-        <div class="rc-desc">
+        <div class="rung-body">
           Every request must include a valid <code>X-API-Key</code> header.
-          Missing, malformed (under 8 chars, contains injection characters), or incorrect keys are blocked instantly.
+          Missing, malformed (under 8 chars, contains injection characters), or incorrect keys are rejected instantly.
           This is the <b>sole authentication boundary</b> &mdash; unauthenticated traffic never reaches any other check.
+          <div class="rung-config">Severity: medium &nbsp;&#8226;&nbsp; Block duration: 60s
+Example trigger: X-API-Key: wrong-key-abc  &rarr;  403 Forbidden</div>
         </div>
-        <div class="rc-config">Action: <b style="color:var(--block)">Block</b> &nbsp; Severity: medium</div>
       </div>
 
-      <div class="rule-card rc-sqli">
-        <div class="rc-header">
-          <span class="badge badge-orange">PRIORITY 2</span>
-          <span class="rc-name">SQL / NoSQL Injection</span>
+      <div class="rule-rung" onclick="this.classList.toggle('open')">
+        <div class="rung-hdr">
+          <span class="rung-num" style="background:#ea580c">P2</span>
+          <span class="rung-name">SQL / NoSQL Injection</span>
+          <span class="rung-badge" style="background:#ffedd5;color:#ea580c">Honeypot</span>
+          <span class="rung-arrow">&#9658;</span>
         </div>
-        <div class="rc-desc">
-          Recursively extracts all strings (keys and values) from the JSON body and matches against 10 compiled regex patterns:
-          UNION SELECT, DROP TABLE, OR 1=1, MongoDB operators ($where, $ne), time-based blind (SLEEP), comment markers (-- # /*), and more.
+        <div class="rung-body">
+          Recursively extracts all strings from the JSON body and matches against 10 compiled regex patterns:
+          UNION SELECT, DROP TABLE, OR 1=1, MongoDB operators ($where, $ne), time-based blind (SLEEP, BENCHMARK),
+          comment markers (-- # /*), and more. Matched requests are <b>silently redirected to the honeypot</b> &mdash;
+          the attacker gets a convincing fake 200 OK while the real servers are untouched.
+          <div class="rung-config">Severity: critical &nbsp;&#8226;&nbsp; Action: honeypot redirect (not block)
+Example trigger: num1: "1 OR 1=1 --"  &rarr;  200 OK (fake response from honeypot)</div>
         </div>
-        <div class="rc-config">Action: <b style="color:var(--honeypot)">Honeypot</b> &nbsp; Severity: critical &mdash; attacker gets fake 200 response</div>
       </div>
 
-      <div class="rule-card rc-rate">
-        <div class="rc-header">
-          <span class="badge badge-purple">PRIORITY 3</span>
-          <span class="rc-name">Rate Limiting</span>
+      <div class="rule-rung" onclick="this.classList.toggle('open')">
+        <div class="rung-hdr">
+          <span class="rung-num" style="background:#7c3aed">P3</span>
+          <span class="rung-name">Rate Limiting</span>
+          <span class="rung-badge" style="background:#ede9fe;color:#7c3aed">Block</span>
+          <span class="rung-arrow">&#9658;</span>
         </div>
-        <div class="rc-desc">
+        <div class="rung-body">
           Sliding-window counter per IP. Timestamps are stored in a deque and evicted as they leave the window.
           When the count exceeds the threshold, the IP is blocked.
-          The decision is made <b>inside the lock</b> to prevent race conditions at the threshold boundary.
+          The decision happens <b>inside the lock</b> to prevent race conditions at the threshold boundary &mdash;
+          two concurrent requests can't both read 199 and both pass.
+          <div class="rung-config">Threshold: 200 requests / 10 seconds &nbsp;&#8226;&nbsp; Block duration: 5 min
+Detection rate (experiment): 73.3% &mdash; deterministic: (750-200)/750</div>
         </div>
-        <div class="rc-config">Config: <b>200 requests / 10 seconds</b> &nbsp; Action: <b style="color:var(--block)">Block</b></div>
       </div>
 
-      <div class="rule-card rc-scan">
-        <div class="rc-header">
-          <span class="badge badge-amber">PRIORITY 4</span>
-          <span class="rc-name">Endpoint Scan</span>
+      <div class="rule-rung" onclick="this.classList.toggle('open')">
+        <div class="rung-hdr">
+          <span class="rung-num" style="background:#b45309">P4</span>
+          <span class="rung-name">Endpoint Scan Detection</span>
+          <span class="rung-badge" style="background:#fef3c7;color:#b45309">Deprioritise</span>
+          <span class="rung-arrow">&#9658;</span>
         </div>
-        <div class="rc-desc">
+        <div class="rung-body">
           Detects rapid probing of multiple distinct API paths from a single IP.
           Attackers enumerating the API surface hit many different endpoints quickly &mdash;
-          legitimate clients typically use 1&ndash;2 paths.
+          legitimate clients typically use 1&ndash;2 paths. Sliding window tracks distinct paths per IP.
+          Deprioritise (not block) since a misconfigured client might legitimately probe multiple endpoints.
+          <div class="rung-config">Threshold: &gt;5 distinct paths in 10s &nbsp;&#8226;&nbsp; Action: deprioritise + strike logged
+Escalation: 8 strikes in 120s &rarr; auto-block for 30s</div>
         </div>
-        <div class="rc-config">Config: <b>&gt;5 distinct paths in 10s</b> &nbsp; Action: <b style="color:var(--deprio)">Deprioritise</b></div>
       </div>
 
-      <div class="rule-card rc-payload">
-        <div class="rc-header">
-          <span class="badge badge-gray">PRIORITY 5</span>
-          <span class="rc-name">Payload Size</span>
+      <div class="rule-rung" onclick="this.classList.toggle('open')">
+        <div class="rung-hdr">
+          <span class="rung-num" style="background:#6b7280">P5</span>
+          <span class="rung-name">Payload Size</span>
+          <span class="rung-badge" style="background:#f3f4f6;color:#6b7280">Block</span>
+          <span class="rung-arrow">&#9658;</span>
         </div>
-        <div class="rc-desc">
-          Two sub-checks: (a) raw body size exceeding 8 KB, and (b) sort_large_list requests with more than 500 items.
-          Prevents memory exhaustion attacks where oversized payloads consume server resources.
+        <div class="rung-body">
+          Two sub-checks: (a) raw body size exceeding 8 KB prevents memory exhaustion,
+          and (b) sort_large_list requests with more than 500 items prevent CPU exhaustion.
+          These attacks don't need to be clever &mdash; just sending oversized data repeatedly can
+          degrade server performance significantly without triggering the rate limiter.
+          <div class="rung-config">Limits: 8192 bytes body / 500 items in list &nbsp;&#8226;&nbsp; Block duration: 60s</div>
         </div>
-        <div class="rc-config">Config: <b>8192 bytes / 500 items</b> &nbsp; Action: <b style="color:var(--block)">Block</b></div>
       </div>
 
-      <div class="rule-card" style="border-left-color: var(--allow);">
-        <div class="rc-header">
-          <span class="badge badge-green">PASS</span>
-          <span class="rc-name">All Checks Passed</span>
+      <div class="rule-rung r-pass" onclick="this.classList.toggle('open')">
+        <div class="rung-hdr">
+          <span class="rung-num" style="background:var(--allow)">PASS</span>
+          <span class="rung-name">All checks passed &rarr; Anomaly Engine</span>
+          <span class="rung-badge" style="background:#dcfce7;color:var(--allow)">Forward</span>
+          <span class="rung-arrow">&#9658;</span>
         </div>
-        <div class="rc-desc">
-          If none of the above rules fire, the request is clean from a rule perspective.
-          It then moves to the <b>Anomaly Engine</b> (Phase 2) for statistical scoring against the IP's baseline behaviour.
+        <div class="rung-body">
+          If no rule fires, the request is clean from a stateless rule perspective.
+          It moves to the Anomaly Engine (Phase 2) for statistical scoring against this IP's baseline behaviour.
+          The Anomaly Engine can still flag it &mdash; but only the rule engine result is recorded here.
+          <div class="rung-config">No block, no honeypot. Inspect time: &lt;1ms.
+Anomaly engine will run next on requests that reach this point.</div>
         </div>
-        <div class="rc-config">Action: <b style="color:var(--allow)">Forward to Anomaly Engine</b></div>
       </div>
 
     </div>
   </div>
 
-  <!-- Request trace example -->
+  <!-- Interactive trace -->
   <div class="card">
-    <div class="card-title">Example: SQL injection request trace</div>
-    <div class="trace-box">
-      <div class="trace-step pass">
-        <div class="ts-icon">&#x2705;</div>
-        <div class="ts-label">API Key</div>
-        <div class="ts-value">Valid key present</div>
+    <div class="card-title">Request trace &mdash; pick a scenario to see how rules fire</div>
+    <div class="trace-btns">
+      <button class="trace-btn" onclick="runTrace('wrong_key')">Wrong API Key</button>
+      <button class="trace-btn" onclick="runTrace('sqli')">SQL Injection</button>
+      <button class="trace-btn" onclick="runTrace('flood')">Rate Flood</button>
+      <button class="trace-btn" onclick="runTrace('clean')">Clean Request</button>
+    </div>
+    <div class="trace-scene" id="trace-scene">
+      <div class="trace-cell" id="tc-auth">
+        <div class="tc-icon">&#x1F511;</div>
+        <div class="tc-label">P1 Auth</div>
+        <div class="tc-val" id="tv-auth">waiting</div>
       </div>
-      <div class="trace-step fail">
-        <div class="ts-icon">&#x1F6A8;</div>
-        <div class="ts-label">SQL Injection</div>
-        <div class="ts-value">Pattern matched: OR 1=1</div>
+      <div class="trace-cell" id="tc-sqli">
+        <div class="tc-icon">&#x26A0;</div>
+        <div class="tc-label">P2 Injection</div>
+        <div class="tc-val" id="tv-sqli">waiting</div>
       </div>
-      <div class="trace-step" style="opacity:0.3">
-        <div class="ts-icon">&#x23ED;</div>
-        <div class="ts-label">Rate Limit</div>
-        <div class="ts-value">Skipped</div>
+      <div class="trace-cell" id="tc-rate">
+        <div class="tc-icon">&#x23F1;</div>
+        <div class="tc-label">P3 Rate</div>
+        <div class="tc-val" id="tv-rate">waiting</div>
       </div>
-      <div class="trace-step" style="opacity:0.3">
-        <div class="ts-icon">&#x23ED;</div>
-        <div class="ts-label">Anomaly</div>
-        <div class="ts-value">Skipped</div>
+      <div class="trace-cell" id="tc-scan">
+        <div class="tc-icon">&#x1F50D;</div>
+        <div class="tc-label">P4 Scan</div>
+        <div class="tc-val" id="tv-scan">waiting</div>
       </div>
-      <div class="trace-step fail">
-        <div class="ts-icon">&#x1F36F;</div>
-        <div class="ts-label">Verdict</div>
-        <div class="ts-value">Redirected to Honeypot</div>
+      <div class="trace-cell" id="tc-payload">
+        <div class="tc-icon">&#x1F4E6;</div>
+        <div class="tc-label">P5 Payload</div>
+        <div class="tc-val" id="tv-payload">waiting</div>
+      </div>
+      <div class="trace-cell" id="tc-verdict">
+        <div class="tc-icon">&#x2696;</div>
+        <div class="tc-label">Verdict</div>
+        <div class="tc-val" id="tv-verdict">waiting</div>
       </div>
     </div>
-    <p style="margin-top:12px; font-size:12px; color:var(--muted);">
-      The rule engine short-circuits: once SQL injection matches at Priority 2, rate limiting and anomaly scoring are never executed.
-      The attacker receives a fake 200 success from the honeypot while the real servers are untouched.
-    </p>
+    <div id="trace-caption">Select a scenario above to animate the request trace.</div>
   </div>
 
   <!-- Live test -->
   <div class="card">
-    <div class="card-title">Test it live</div>
-    <div style="display:flex; flex-direction:column; gap:10px;">
-
-      <div class="demo-row-inline">
-        <span class="dri-label">Wrong API Key</span>
-        <span class="dri-desc">Sends a request with an invalid key &rarr; should be blocked instantly</span>
-        <button class="btn btn-purple" onclick="ruleDemo('wrong_key')">Send</button>
-      </div>
-
-      <div class="demo-row-inline">
-        <span class="dri-label">SQL Injection</span>
-        <span class="dri-desc">Sends <code>num1: "1 OR 1=1 --"</code> &rarr; should be redirected to honeypot</span>
-        <button class="btn btn-purple" onclick="ruleDemo('sqli')">Send</button>
-      </div>
-
-      <div class="demo-row-inline">
-        <span class="dri-label">Rate Flood</span>
-        <span class="dri-desc">Blasts 250 concurrent requests &rarr; rate limit fires at 200, rest get blocked</span>
-        <button class="btn btn-purple" onclick="ruleDemo('flood')">Send</button>
-      </div>
-
-      <div id="rules-demo-status">Ready &mdash; click a button to test a rule.</div>
+    <div class="card-title">Test it live &mdash; fires against the real IDMS</div>
+    <div class="test-row">
+      <span class="tr-label">Wrong API Key</span>
+      <span class="tr-desc">Sends a request with an invalid key &rarr; blocked instantly by P1</span>
+      <button class="btn btn-purple" onclick="liveTest('wrong_key')">Send</button>
     </div>
+    <div class="test-row">
+      <span class="tr-label">SQL Injection</span>
+      <span class="tr-desc">Sends <code>num1: "1 OR 1=1 --"</code> &rarr; P2 catches it, redirected to honeypot</span>
+      <button class="btn btn-purple" onclick="liveTest('sqli')">Send</button>
+    </div>
+    <div class="test-row">
+      <span class="tr-label">Rate Flood</span>
+      <span class="tr-desc">Blasts 250 concurrent requests &rarr; first 200 pass, P3 fires, remainder blocked</span>
+      <button class="btn btn-purple" onclick="liveTest('flood')">Send</button>
+    </div>
+    <div id="rules-status">Ready &mdash; click Send to fire a live request against the IDMS.</div>
   </div>
 
 </div>
@@ -290,29 +360,108 @@
 
 {% block scripts %}
 <script>
-  async function ruleDemo(type) {
-    const el = document.getElementById('rules-demo-status');
-    const labels = {
-      wrong_key: 'Sending request with wrong API key\u2026',
-      sqli:      'Sending SQL injection payload\u2026',
-      flood:     'Launching rate flood (250 requests)\u2026',
-    };
-    el.textContent = labels[type] || 'Sending\u2026';
-    el.style.color = '#2563eb';
+// ── Pipeline node highlight ────────────────────────────────────────────────
+function litNode(el, tip) {
+  document.querySelectorAll('.pipe-node').forEach(n => { n.classList.remove('lit'); n.classList.add('dimmed'); });
+  el.classList.remove('dimmed'); el.classList.add('lit');
+  const box = document.getElementById('pipe-tip');
+  box.textContent = tip; box.style.display = 'block';
+}
 
-    try {
-      const r = await fetch('/api/demo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type }),
-      });
-      const d = await r.json();
-      el.textContent = d.message || 'Done.';
-      el.style.color = '#16a34a';
-    } catch (e) {
-      el.textContent = 'Error: ' + e.message;
-      el.style.color = '#dc2626';
-    }
-  }
+// ── Interactive trace ─────────────────────────────────────────────────────
+const SCENARIOS = {
+  wrong_key: {
+    label: 'Wrong API Key',
+    steps: [
+      { id:'auth',    cls:'t-fail',  val:'INVALID KEY', info:'X-API-Key did not match — block immediately' },
+      { id:'sqli',    cls:'t-skip',  val:'skipped' },
+      { id:'rate',    cls:'t-skip',  val:'skipped' },
+      { id:'scan',    cls:'t-skip',  val:'skipped' },
+      { id:'payload', cls:'t-skip',  val:'skipped' },
+      { id:'verdict', cls:'t-fail',  val:'403 Block\n60s ban', info:'Auth failure &mdash; blocked for 60 seconds' },
+    ],
+    caption: 'P1 fires immediately. The request never reaches injection, rate, or anomaly checks. Short-circuit saves all downstream work.',
+  },
+  sqli: {
+    label: 'SQL Injection',
+    steps: [
+      { id:'auth',    cls:'t-pass',  val:'valid key' },
+      { id:'sqli',    cls:'t-fail',  val:'PATTERN MATCH\n"OR 1=1 --"', info:'Injection pattern found in request body' },
+      { id:'rate',    cls:'t-skip',  val:'skipped' },
+      { id:'scan',    cls:'t-skip',  val:'skipped' },
+      { id:'payload', cls:'t-skip',  val:'skipped' },
+      { id:'verdict', cls:'t-honey', val:'Honeypot\nfake 200 OK', info:'Attacker gets a convincing fake response &mdash; real servers untouched' },
+    ],
+    caption: 'P1 passes. P2 catches the injection pattern. The attacker receives a fake success from the honeypot — they don\'t know they\'ve been detected.',
+  },
+  flood: {
+    label: 'Rate Flood',
+    steps: [
+      { id:'auth',    cls:'t-pass',  val:'valid key' },
+      { id:'sqli',    cls:'t-pass',  val:'clean body' },
+      { id:'rate',    cls:'t-fail',  val:'OVER LIMIT\n>200 / 10s', info:'200 req/10s threshold exceeded' },
+      { id:'scan',    cls:'t-skip',  val:'skipped' },
+      { id:'payload', cls:'t-skip',  val:'skipped' },
+      { id:'verdict', cls:'t-fail',  val:'403 Block\n5 min ban', info:'Rate limit breach &mdash; high severity, 5 minute block' },
+    ],
+    caption: 'P1 and P2 pass. P3 fires at 200+ requests in a 10s window. The sliding-window counter decision is atomic — no race conditions at the threshold boundary.',
+  },
+  clean: {
+    label: 'Clean Request',
+    steps: [
+      { id:'auth',    cls:'t-pass',  val:'valid key' },
+      { id:'sqli',    cls:'t-pass',  val:'no patterns' },
+      { id:'rate',    cls:'t-pass',  val:'under 200/10s' },
+      { id:'scan',    cls:'t-pass',  val:'single path' },
+      { id:'payload', cls:'t-pass',  val:'normal size' },
+      { id:'verdict', cls:'t-pass',  val:'Anomaly Engine\nnext', info:'All checks passed &mdash; forwarded to Phase 2 anomaly scoring' },
+    ],
+    caption: 'All 5 checks pass. The request moves to the Anomaly Engine for statistical baseline scoring. Rule inspect time: <1ms.',
+  },
+};
+
+let traceActive = false;
+function runTrace(scenario) {
+  if (traceActive) return;
+  traceActive = true;
+
+  // Reset
+  document.querySelectorAll('.trace-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  ['auth','sqli','rate','scan','payload','verdict'].forEach(id => {
+    const cell = document.getElementById('tc-' + id);
+    cell.className = 'trace-cell t-pending';
+    document.getElementById('tv-' + id).textContent = '...';
+  });
+  document.getElementById('trace-caption').textContent = 'Running trace...';
+
+  const sc = SCENARIOS[scenario];
+  sc.steps.forEach((step, i) => {
+    setTimeout(() => {
+      const cell = document.getElementById('tc-' + step.id);
+      // Remove old class, force reflow for re-animation
+      cell.className = 'trace-cell';
+      void cell.offsetWidth;
+      cell.className = 'trace-cell ' + step.cls;
+      document.getElementById('tv-' + step.id).textContent = step.val;
+      if (i === sc.steps.length - 1) {
+        document.getElementById('trace-caption').textContent = sc.caption;
+        traceActive = false;
+      }
+    }, i * 320);
+  });
+}
+
+// ── Live test ──────────────────────────────────────────────────────────────
+async function liveTest(type) {
+  const el = document.getElementById('rules-status');
+  const msgs = { wrong_key: 'Sending wrong API key...', sqli: 'Sending SQL injection payload...', flood: 'Launching flood (250 requests)...' };
+  el.textContent = msgs[type] || 'Sending...'; el.style.color = '#2563eb';
+  try {
+    const r = await fetch('/api/demo', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({type}) });
+    const d = await r.json();
+    el.textContent = d.message || 'Done.'; el.style.color = '#16a34a';
+  } catch(e) { el.textContent = 'Error: ' + e.message; el.style.color = '#dc2626'; }
+}
 </script>
 {% endblock %}

@@ -6,91 +6,110 @@
 .findings-hero { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
 .finding-card {
   background: var(--card); border: 1px solid var(--border);
-  border-radius: 10px; padding: 24px 20px;
-  border-top: 4px solid var(--border);
-  box-shadow: var(--shadow); text-align: center;
+  border-radius: 10px; padding: 24px 18px;
+  border-top: 4px solid var(--border); box-shadow: var(--shadow); text-align: center;
 }
-.fc-number { font-size: 52px; font-weight: 800; line-height: 1; margin-bottom: 4px; }
-.fc-number sup { font-size: 24px; font-weight: 700; vertical-align: super; }
+.fc-number {
+  font-size: 52px; font-weight: 800; line-height: 1; margin-bottom: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.fc-unit { font-size: 22px; font-weight: 700; vertical-align: text-top; }
 .fc-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; color: var(--muted); margin-bottom: 8px; }
-.fc-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.fc-desc  { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
 .fc-green  { border-top-color: var(--allow);    } .fc-green  .fc-number { color: var(--allow);    }
 .fc-red    { border-top-color: var(--block);    } .fc-red    .fc-number { color: var(--block);    }
 .fc-orange { border-top-color: var(--honeypot); } .fc-orange .fc-number { color: var(--honeypot); }
 .fc-blue   { border-top-color: var(--accent);   } .fc-blue   .fc-number { color: var(--accent);   }
 
-/* ── Detection coverage table ── */
+/* ── Detection coverage ── */
 .coverage-table td.cell-yes  { background: #dcfce7; color: #15803d; font-weight: 600; text-align: center; }
 .coverage-table td.cell-part { background: #fef3c7; color: #92400e; font-weight: 600; text-align: center; }
 .coverage-table td.cell-no   { background: #fee2e2; color: #991b1b; font-weight: 600; text-align: center; }
 .coverage-table td.cell-na   { background: #f9fafb; color: #9ca3af; text-align: center; font-size: 12px; }
 
-/* ── Finding detail cards ── */
-.finding-detail {
-  border: 1px solid var(--border); border-radius: 10px;
-  padding: 22px 24px; background: var(--card);
+/* Row expandable in coverage table */
+.coverage-table tbody tr { cursor: pointer; }
+.coverage-table tbody tr:hover td { background-color: #f8fafc !important; }
+.cov-detail { display: none; font-size: 12px; color: var(--muted); padding-top: 4px; font-weight: 400; font-style: italic; }
+tr.row-open .cov-detail { display: block; }
+
+/* ── Under-attack table ── */
+.ua-good { color: var(--allow); font-weight: 600; }
+.ua-bad  { color: var(--block); font-weight: 600; }
+
+/* ── Finding detail panels ── */
+.finding-panel {
+  border: 1px solid var(--border); border-radius: 10px; overflow: hidden; cursor: pointer;
+  transition: border-color 0.15s;
 }
-.fd-badge {
-  display: inline-block; font-size: 10px; font-weight: 700; letter-spacing: 0.5px;
-  text-transform: uppercase; padding: 3px 10px; border-radius: 20px;
-  margin-bottom: 10px;
+.finding-panel:hover { border-color: #c4b5fd; }
+.finding-panel.open  { border-color: var(--accent); }
+
+.fp-header {
+  display: flex; align-items: center; gap: 12px; padding: 14px 18px;
+  background: var(--bg); user-select: none;
 }
-.fd-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
-.fd-claim { font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 12px; }
-.fd-data {
+.fp-badge {
+  font-size: 10px; font-weight: 700; padding: 2px 10px; border-radius: 4px;
+  white-space: nowrap; flex-shrink: 0;
+}
+.fp-title  { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
+.fp-arrow  { color: var(--muted); font-size: 11px; transition: transform 0.2s; flex-shrink: 0; }
+.finding-panel.open .fp-arrow { transform: rotate(90deg); color: var(--accent); }
+
+.fp-body {
+  display: none; padding: 16px 18px; border-top: 1px solid var(--border); background: var(--card);
+}
+.finding-panel.open .fp-body { display: block; }
+.fp-claim { font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 12px; }
+.fp-data {
   background: #1a1d23; color: #e2e8f0; border-radius: 8px;
-  padding: 14px 18px; font-family: 'SF Mono', 'Consolas', monospace;
+  padding: 14px 18px; font-family: 'SF Mono','Consolas',monospace;
   font-size: 12px; line-height: 1.9; overflow-x: auto; margin-bottom: 12px;
 }
-.fd-data .dk { color: #93c5fd; }
-.fd-data .dv { color: #86efac; }
-.fd-data .dc { color: #6b7280; }
+.dk { color: #93c5fd; } .dv { color: #86efac; } .dc { color: #4b5563; }
 
 /* ── Algorithm comparison ── */
-.algo-compare { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.algo-compare { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
 .algo-col {
   border: 1px solid var(--border); border-radius: 10px;
-  padding: 18px 20px; background: var(--card);
+  padding: 16px 18px; background: var(--card);
+  transition: border-color 0.15s, box-shadow 0.15s; cursor: default;
 }
+.algo-col:hover { border-color: var(--accent); box-shadow: 0 2px 12px rgba(37,99,235,0.08); }
 .algo-col .ac-head {
   font-size: 14px; font-weight: 700; color: var(--text);
   margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid var(--border);
 }
-.ac-stat {
-  display: flex; justify-content: space-between; align-items: baseline;
-  padding: 5px 0; border-bottom: 1px solid #f0f2f5;
-}
-.ac-stat:last-child { border-bottom: none; }
-.ac-stat .as-label { font-size: 12px; color: var(--muted); }
-.ac-stat .as-val   { font-size: 13px; font-weight: 600; color: var(--text); }
-.as-val.good { color: var(--allow); }
-.as-val.warn { color: var(--deprio); }
-.as-val.bad  { color: var(--block); }
-
-/* ── Under-attack table ── */
-.ua-table td.ua-good { color: var(--allow); font-weight: 600; }
-.ua-table td.ua-bad  { color: var(--block); font-weight: 600; }
+.ac-row { display: flex; justify-content: space-between; padding: 5px 0; border-bottom: 1px solid #f0f2f5; }
+.ac-row:last-child { border-bottom: none; }
+.ac-key { font-size: 12px; color: var(--muted); }
+.ac-val { font-size: 13px; font-weight: 600; color: var(--text); }
+.ac-val.good { color: var(--allow); } .ac-val.warn { color: var(--deprio); } .ac-val.bad { color: var(--block); }
 
 /* ── Limitations ── */
-.limitations { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; }
-.limit-card {
-  border: 1px solid var(--border); border-radius: 8px;
-  padding: 16px 20px; background: var(--card);
-  border-left: 4px solid var(--deprio);
+.limitations { display: grid; grid-template-columns: repeat(2,1fr); gap: 14px; }
+.limit-row {
+  display: flex; gap: 10px; padding: 12px 16px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  border-left: 4px solid var(--deprio); cursor: pointer; transition: border-color 0.15s;
+  align-items: flex-start;
 }
-.lc-num   { font-size: 10px; font-weight: 700; color: var(--deprio); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
-.lc-title { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 6px; }
-.lc-body  { font-size: 12px; color: var(--muted); line-height: 1.6; }
+.limit-row:hover { border-color: var(--deprio); background: #fffbeb; }
+.limit-row.open  { border-color: var(--deprio); }
+.lr-arrow { color: var(--muted); font-size: 11px; transition: transform 0.2s; margin-top: 2px; flex-shrink: 0; }
+.limit-row.open .lr-arrow { transform: rotate(90deg); color: var(--deprio); }
+.lr-title  { font-size: 13px; font-weight: 600; color: var(--text); }
+.lr-body   { display:none; font-size:12px; color:var(--muted); line-height:1.6; margin-top:6px; }
+.limit-row.open .lr-body { display: block; }
 
-/* ── Section divider ── */
-.section-label {
-  font-size: 11px; font-weight: 600; text-transform: uppercase;
-  letter-spacing: 0.8px; color: var(--muted);
-  display: flex; align-items: center; gap: 10px;
+/* ── Section label ── */
+.section-sep {
+  font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px;
+  color: var(--muted); display: flex; align-items: center; gap: 10px;
 }
-.section-label::after {
-  content: ''; flex: 1; height: 1px; background: var(--border);
-}
+.section-sep::after { content:''; flex:1; height:1px; background:var(--border); }
 {% endblock %}
 
 {% block body %}
@@ -98,36 +117,36 @@
 
   <div class="page-header">
     <h2>Research Findings</h2>
-    <p>Experimental evaluation — 4 scenarios (S1–S4), 3 algorithms, 3 runs each &mdash; all data collected under controlled Docker environment</p>
+    <p>Experimental evaluation &mdash; 4 scenarios (S1&ndash;S4), 3 algorithms, 3 runs each, all under controlled Docker environment</p>
   </div>
 
-  <!-- ── 4 Headline numbers ─────────────────────────────────────────────── -->
+  <!-- ── Headline numbers (count-up animation) ── -->
   <div class="findings-hero">
     <div class="finding-card fc-green">
       <div class="fc-label">IDMS Latency Overhead</div>
-      <div class="fc-number">&minus;1.4<sup>ms</sup></div>
+      <div class="fc-number">&minus;<span class="count-up" data-target="1.4" data-decimals="1">0.0</span><span class="fc-unit">ms</span></div>
       <div class="fc-desc">Full two-stage inspection adds <b>zero measurable overhead</b>. Delta is within noise (σ&nbsp;=&nbsp;42.7&nbsp;ms).</div>
     </div>
     <div class="finding-card fc-red">
       <div class="fc-label">Rate Flood Blocked</div>
-      <div class="fc-number">73.3<sup>%</sup></div>
-      <div class="fc-desc">Mathematically exact: (750&minus;200)/750. First 200&nbsp;req/10s pass by design before block fires.</div>
+      <div class="fc-number"><span class="count-up" data-target="73.3" data-decimals="1">0.0</span><span class="fc-unit">%</span></div>
+      <div class="fc-desc">Mathematically exact: (750&minus;200)&divide;750. First 200&nbsp;req/10s always pass before block fires.</div>
     </div>
     <div class="finding-card fc-orange">
       <div class="fc-label">SQL / NoSQL Injection Caught</div>
-      <div class="fc-number">100<sup>%</sup></div>
-      <div class="fc-desc">300/300 payloads silently redirected to honeypot. Attacker received fake 200&nbsp;OK &mdash; no detection signal.</div>
+      <div class="fc-number"><span class="count-up" data-target="100" data-decimals="0">0</span><span class="fc-unit">%</span></div>
+      <div class="fc-desc">300/300 payloads silently redirected to honeypot. Attacker received fake 200&nbsp;OK.</div>
     </div>
     <div class="finding-card fc-blue">
       <div class="fc-label">False Positive Rate</div>
-      <div class="fc-number">0.00<sup>%</sup></div>
+      <div class="fc-number"><span class="count-up" data-target="0.00" data-decimals="2">0.00</span><span class="fc-unit">%</span></div>
       <div class="fc-desc">1,800 legitimate requests at 15&nbsp;req/s. Zero blocks, zero deprioritisations. Full IDMS active.</div>
     </div>
   </div>
 
-  <!-- ── Detection coverage ─────────────────────────────────────────────── -->
+  <!-- ── Detection coverage ── -->
   <div class="card">
-    <div class="card-title">Detection coverage — what each stage catches</div>
+    <div class="card-title">Detection coverage &mdash; click any row for the explanation</div>
     <table class="coverage-table">
       <thead>
         <tr>
@@ -140,255 +159,236 @@
         </tr>
       </thead>
       <tbody>
-        <tr>
-          <td style="font-weight:600">Rate Flood</td>
-          <td class="cell-yes">73.3%</td>
-          <td class="cell-na">—</td>
-          <td class="cell-yes">73.3%</td>
+        <tr onclick="this.classList.toggle('row-open')">
+          <td style="font-weight:600">Rate Flood<div class="cov-detail">750 requests, 250 concurrent. Rate limit fires after 200 in the 10s window. The 73.3% is deterministic — always exactly (750-200)/750 regardless of run.</div></td>
+          <td class="cell-yes">73.3%</td><td class="cell-na">—</td><td class="cell-yes">73.3%</td>
           <td>Yes &mdash; 403</td>
-          <td style="font-size:12px; color:var(--muted)">Deterministic ceiling. First 200/10s always pass before block fires.</td>
+          <td style="font-size:12px;color:var(--muted)">Deterministic ceiling. First 200/10s always pass.</td>
         </tr>
-        <tr>
-          <td style="font-weight:600">SQL / NoSQL Injection</td>
-          <td class="cell-yes">100%</td>
-          <td class="cell-na">—</td>
-          <td class="cell-yes">100%</td>
+        <tr onclick="this.classList.toggle('row-open')">
+          <td style="font-weight:600">SQL / NoSQL Injection<div class="cov-detail">300 payloads across SQL and NoSQL families (UNION SELECT, OR 1=1, $where, SLEEP, DROP TABLE, etc). All 300 matched at P2, covertly redirected. Attacker never received a 403 — only fake 200s from the honeypot.</div></td>
+          <td class="cell-yes">100%</td><td class="cell-na">—</td><td class="cell-yes">100%</td>
           <td>No &mdash; honeypot</td>
-          <td style="font-size:12px; color:var(--muted)">300/300 across SQL and NoSQL families. Covert redirect.</td>
+          <td style="font-size:12px;color:var(--muted)">300/300. Covert redirect — no detection signal to attacker.</td>
         </tr>
-        <tr>
-          <td style="font-weight:600">Slow-Rate Burst</td>
-          <td class="cell-no">0%</td>
-          <td class="cell-no">0% *</td>
-          <td class="cell-no">0%</td>
+        <tr onclick="this.classList.toggle('row-open')">
+          <td style="font-weight:600">Slow-Rate Burst<div class="cov-detail">Root cause measured: baseline contamination. The 30s window absorbed early burst traffic, collapsing the median IAT from ~100ms to 4.34ms. Subsequent bursts scored Z=0.97 max, below threshold=1.5. This is architectural, not a calibration issue.</div></td>
+          <td class="cell-no">0%</td><td class="cell-no">0%&nbsp;*</td><td class="cell-no">0%</td>
           <td>—</td>
-          <td style="font-size:12px; color:var(--muted)">*Baseline contamination. Z mean=0.304, max=1.171 vs threshold=1.5.</td>
+          <td style="font-size:12px;color:var(--muted)">*Baseline contamination. Z mean=0.304, max=1.171 vs 1.5 threshold.</td>
         </tr>
-        <tr>
-          <td style="font-weight:600">Gradual Ramp &le;8&nbsp;req/s</td>
-          <td class="cell-no">0%</td>
-          <td class="cell-no">0%</td>
-          <td class="cell-no">0%</td>
+        <tr onclick="this.classList.toggle('row-open')">
+          <td style="font-weight:600">Ramp &le;8&nbsp;req/s<div class="cov-detail">Steps 1–2 of the ramp experiment (2 and 5 req/s). Under the rate limit ceiling. The baseline adapts to the new rate within the 30s window before escalation fires. Detection requires sustained high rate.</div></td>
+          <td class="cell-no">0%</td><td class="cell-no">0%</td><td class="cell-no">0%</td>
           <td>—</td>
-          <td style="font-size:12px; color:var(--muted)">Under rate ceiling. Baseline adapts before escalation fires.</td>
+          <td style="font-size:12px;color:var(--muted)">Under rate ceiling. Baseline adapts before escalation fires.</td>
         </tr>
-        <tr>
-          <td style="font-weight:600">Gradual Ramp &ge;11&nbsp;req/s</td>
-          <td class="cell-no">0%</td>
-          <td class="cell-part">13–52%</td>
-          <td class="cell-part">13–52%</td>
+        <tr onclick="this.classList.toggle('row-open')">
+          <td style="font-weight:600">Ramp &ge;11&nbsp;req/s<div class="cov-detail">Steps 3–5 (11, 14, 17 req/s). Step 5 consistently catches 43–57% across all 3 algorithms (3-run averages). Detection mechanism: anomaly escalation path (8 deprioritise strikes → 30s block), not the rate-limit rule.</div></td>
+          <td class="cell-no">0%</td><td class="cell-part">13–52%</td><td class="cell-part">13–52%</td>
           <td>No &mdash; escalation block</td>
-          <td style="font-size:12px; color:var(--muted)">Step 5 (17 req/s) consistently 43–57% across all algorithms. 3-run average.</td>
+          <td style="font-size:12px;color:var(--muted)">Step 5 (17 req/s) avg 43–57%. 3-run averages per algorithm.</td>
         </tr>
       </tbody>
     </table>
-    <p style="margin-top:10px; font-size:12px; color:var(--muted);">
-      Each detection stage catches attacks the other cannot. The rule engine handles known patterns with deterministic, low-latency decisions.
-      The anomaly engine catches novel acceleration patterns that evade static thresholds.
-      Neither layer alone achieves the coverage of both combined.
-    </p>
   </div>
 
-  <!-- ── Without IDMS: collateral damage ───────────────────────────────── -->
+  <!-- ── Without IDMS: collateral damage ── -->
   <div class="card">
-    <div class="card-title">Without IDMS &mdash; collateral damage to legitimate traffic under flood attack</div>
+    <div class="card-title">Without IDMS &mdash; collateral damage to legitimate traffic under flood (S1 vs S2)</div>
     <div class="row-2">
-      <table class="ua-table">
-        <thead>
-          <tr>
-            <th>Metric</th>
-            <th>S1 &mdash; Baseline (no attack)</th>
-            <th>S2 &mdash; Under Flood (no IDMS)</th>
-            <th>Change</th>
-          </tr>
-        </thead>
+      <table>
+        <thead><tr><th>Metric</th><th>S1 &mdash; No attack</th><th>S2 &mdash; Flood, no IDMS</th><th>Change</th></tr></thead>
         <tbody>
-          <tr>
-            <td style="font-weight:600">Success rate</td>
-            <td class="ua-good" style="text-align:center">100%</td>
-            <td style="text-align:center; color:var(--block); font-weight:600">94.1%</td>
-            <td class="ua-bad">&minus;5.9%</td>
-          </tr>
-          <tr>
-            <td style="font-weight:600">Mean latency</td>
-            <td style="text-align:center">175.8 ms</td>
-            <td style="text-align:center">203.6 ms</td>
-            <td class="ua-bad">+15.8%</td>
-          </tr>
-          <tr>
-            <td style="font-weight:600">Latency std dev</td>
-            <td style="text-align:center">42.7 ms</td>
-            <td style="text-align:center">521.6 ms</td>
-            <td class="ua-bad">+12&times;</td>
-          </tr>
+          <tr><td style="font-weight:600">Success rate</td><td class="ua-good" style="text-align:center">100%</td><td style="text-align:center;color:var(--block);font-weight:600">94.1%</td><td class="ua-bad">&minus;5.9%</td></tr>
+          <tr><td style="font-weight:600">Mean latency</td><td style="text-align:center">175.8 ms</td><td style="text-align:center">203.6 ms</td><td class="ua-bad">+15.8%</td></tr>
+          <tr><td style="font-weight:600">Latency std dev</td><td style="text-align:center">42.7 ms</td><td style="text-align:center">521.6 ms</td><td class="ua-bad">+12&times;</td></tr>
         </tbody>
       </table>
-      <div class="highlight-box rose" style="align-self:center;">
-        Without IDMS, 5.9% of legitimate requests fail and latency variance increases <b>12-fold</b>,
-        even though the attacker and legitimate client use <b>different source IPs</b>.
-        Isolation at the network level is insufficient &mdash; they share the same backend pool.
+      <div class="highlight-box rose" style="align-self:center; font-size:13px;">
+        Attacker and legitimate client use <b>different source IPs</b>. Network-level isolation is insufficient &mdash;
+        they share the same backend pool. Without IDMS, 5.9% of legitimate requests fail and latency variance rises 12&times;.
         This is the motivating result for inline inspection.
       </div>
     </div>
   </div>
 
-  <div class="section-label">Key findings</div>
+  <div class="section-sep">Key findings &mdash; click to expand</div>
 
-  <!-- ── Baseline contamination + SH concentration ─────────────────────── -->
+  <!-- ── Finding panels ── -->
   <div class="row-2">
-
-    <div class="finding-detail">
-      <div class="fd-badge" style="background:#fef3c7; color:#92400e;">Finding 5 &mdash; Slow-Rate Evasion</div>
-      <div class="fd-title">Baseline Contamination: Why Slow-Rate Evades Detection</div>
-      <div class="fd-claim">
-        The anomaly engine fails against sustained micro-burst attacks because the 30-second rolling baseline
-        is contaminated by the attack traffic itself. Early burst requests collapse the baseline median from ~100&nbsp;ms to 4.34&nbsp;ms
-        within one window cycle. All subsequent burst requests then score Z&nbsp;&asymp;&nbsp;0.97 &mdash; well below threshold&nbsp;=&nbsp;1.5.
-        <br><br>
-        This is not a threshold calibration issue. It is an architectural property of short-window baselines under sustained attacks.
-        A frozen baseline (computed during warmup only, not updated during scoring) or a &ge;120&nbsp;s window would prevent contamination.
+    <div class="finding-panel" onclick="this.classList.toggle('open')">
+      <div class="fp-header">
+        <span class="fp-badge" style="background:#fef3c7;color:#92400e">Finding 5</span>
+        <span class="fp-title">Baseline Contamination &mdash; Why Slow-Rate Evades Detection</span>
+        <span class="fp-arrow">&#9658;</span>
       </div>
-      <div class="fd-data">
-<span class="dc"># Z-score measurements during slow-rate attack phase (200 requests)</span>
-<span class="dk">IAT Z-score mean        </span> <span class="dv">0.304</span>
-<span class="dk">IAT Z-score max         </span> <span class="dv">1.171</span>   <span class="dc">(threshold = 1.5)</span>
-<span class="dk">Requests above threshold</span> <span class="dv">0</span>
-<span class="dk">Baseline IAT median     </span> <span class="dv">4.34 ms</span>  <span class="dc">(was ~100 ms at warmup)</span>
-<span class="dk">Baseline IAT MAD        </span> <span class="dv">2.32 ms</span>
+      <div class="fp-body">
+        <div class="fp-claim">
+          The anomaly engine fails against sustained micro-burst attacks because the 30-second rolling baseline
+          is contaminated by the attack traffic itself. Early bursts collapse the baseline median from ~100ms to 4.34ms
+          within one window cycle, making subsequent bursts score Z&nbsp;&asymp;&nbsp;0.97 &mdash; below threshold&nbsp;=&nbsp;1.5.
+          This is architectural, not a calibration problem. A frozen baseline or &ge;120s window would prevent it.
+        </div>
+        <div class="fp-data">
+<span class="dc"># Measured Z-scores during slow-rate attack (200 requests)</span>
+<span class="dk">IAT Z-score mean         </span><span class="dv">0.304</span>
+<span class="dk">IAT Z-score max          </span><span class="dv">1.171</span>   <span class="dc">(threshold = 1.5)</span>
+<span class="dk">Requests above threshold </span><span class="dv">0</span>
+<span class="dk">Baseline median at scoring</span><span class="dv">4.34 ms</span> <span class="dc">(was ~100 ms at warmup)</span>
+<span class="dk">Baseline MAD at scoring  </span><span class="dv">2.32 ms</span>
 
-<span class="dc"># Z-score calculation (verified)</span>
-Z = 0.6745 &times; |1ms &minus; 4.34ms| / 2.32ms &asymp; <span class="dv">0.97</span>   <span class="dc">&larr; max observed: 1.171</span>
-      </div>
-      <div class="highlight-box" style="font-size:12px;">
-        <b>Fix:</b> Freeze the baseline after warmup, or use a &ge;120&nbsp;s window.
-        Warmup samples remain in the window throughout the attack and keep the median at ~100&nbsp;ms.
+<span class="dc"># Verification</span>
+Z = 0.6745 &times; |1ms &minus; 4.34ms| / 2.32ms &asymp; <span class="dv">0.97</span></div>
+        <div class="highlight-box" style="font-size:12px;">
+          <b>Fix:</b> Freeze the baseline after warmup. Warmup samples remain in the window throughout the attack, keeping the median at ~100ms. The same burst then scores Z&nbsp;&approx;&nbsp;62.
+        </div>
       </div>
     </div>
 
-    <div class="finding-detail">
-      <div class="fd-badge" style="background:#fce7f3; color:#9d174d;">Finding 7 &mdash; Routing &times; Security</div>
-      <div class="fd-title">Source Hashing Amplifies Single-Source Attack Impact</div>
-      <div class="fd-claim">
-        Source hashing routes all requests from the same IP to the same backend server.
-        Under a single-source ramp attack, the targeted server becomes overloaded before IDMS escalation fires &mdash;
-        producing backend 503 errors independently of whether detection occurs.
-        <br><br>
-        Round-robin and least-loaded distribute attack traffic across all 4 servers, preventing premature saturation.
-        This demonstrates that load balancing algorithm choice affects the blast radius of a single-source attack
-        <em>independently of the IDMS</em>.
+    <div class="finding-panel" onclick="this.classList.toggle('open')">
+      <div class="fp-header">
+        <span class="fp-badge" style="background:#fce7f3;color:#9d174d">Finding 7</span>
+        <span class="fp-title">Source Hashing Amplifies Single-Source Attack Impact</span>
+        <span class="fp-arrow">&#9658;</span>
       </div>
-      <div class="fd-data">
-<span class="dc"># SH ramp: backend 503s from single server</span>
-<span class="dk">Step 3 (11 req/s)</span>  <span class="dv">41 backend 503s</span>  from one server
-<span class="dk">Step 4 (14 req/s)</span>  <span class="dv">72 backend 503s</span>  from one server
+      <div class="fp-body">
+        <div class="fp-claim">
+          Source hashing routes all requests from the same IP to the same backend server.
+          Under a single-source ramp attack, the targeted server saturates <em>before</em> IDMS escalation fires,
+          producing 503 errors independent of detection. Round-robin and least-loaded distribute traffic across
+          all 4 servers, preventing premature saturation. Algorithm choice affects blast radius independently of IDMS.
+        </div>
+        <div class="fp-data">
+<span class="dc"># SH ramp: backend 503s from a single targeted server</span>
+<span class="dk">Step 3 (11 req/s) </span><span class="dv">41 backend 503s</span>
+<span class="dk">Step 4 (14 req/s) </span><span class="dv">72 backend 503s</span>
+<span class="dk">RR / LL 503s      </span><span class="dv">0</span>  <span class="dc">at equivalent steps</span>
 
-<span class="dc"># Step 5 detection (17 req/s) — 3-run averages</span>
-<span class="dk">Round Robin    </span> <span class="dv">51.5%</span>  <span class="dc">&larr; distributed, no saturation</span>
-<span class="dk">Source Hashing </span> <span class="dv">46.3%</span>  <span class="dc">&larr; server saturates before block fires</span>
-<span class="dk">Least Loaded   </span> <span class="dv">52.5%</span>  <span class="dc">&larr; distributed, no saturation</span>
-
-<span class="dk">RR / LL backend 503s at equivalent steps</span>  <span class="dv">0</span>
-      </div>
-      <div class="highlight-box rose" style="font-size:12px;">
-        <b>Implication:</b> Security and routing interact non-trivially.
-        An inline IDMS does not eliminate the need to consider algorithm choice when defending against single-source attacks.
+<span class="dc"># Step 5 detection rates (3-run averages)</span>
+<span class="dk">Round Robin    </span><span class="dv">51.5%</span>  <span class="dc">&larr; distributed, no saturation</span>
+<span class="dk">Source Hashing </span><span class="dv">46.3%</span>  <span class="dc">&larr; server saturates before block fires</span>
+<span class="dk">Least Loaded   </span><span class="dv">52.5%</span>  <span class="dc">&larr; distributed, no saturation</span></div>
+        <div class="highlight-box rose" style="font-size:12px;">
+          <b>Implication:</b> An inline IDMS does not eliminate the need to consider algorithm choice when defending against single-source attacks. Security and routing interact non-trivially.
+        </div>
       </div>
     </div>
   </div>
 
-  <!-- ── Algorithm comparison ──────────────────────────────────────────── -->
+  <!-- ── Algorithm comparison ── -->
   <div class="card">
     <div class="card-title">Algorithm &times; IDMS interaction &mdash; 3 algorithms, 3 runs each</div>
     <div class="algo-compare">
-
       <div class="algo-col">
         <div class="ac-head">Round Robin</div>
-        <div class="ac-stat"><span class="as-label">S1 baseline median</span><span class="as-val">165.4 ms</span></div>
-        <div class="ac-stat"><span class="as-label">S4 legit median (IDMS on)</span><span class="as-val">162.9 ms</span></div>
-        <div class="ac-stat"><span class="as-label">IDMS overhead</span><span class="as-val good">&asymp; 0 ms</span></div>
-        <div class="ac-stat"><span class="as-label">Flood detection</span><span class="as-val">73.3%</span></div>
-        <div class="ac-stat"><span class="as-label">SQLi detection</span><span class="as-val">100%</span></div>
-        <div class="ac-stat"><span class="as-label">Ramp step 5 (avg, 3 runs)</span><span class="as-val">51.5%</span></div>
-        <div class="ac-stat"><span class="as-label">Ramp overall (avg)</span><span class="as-val">20.0%</span></div>
-        <div class="ac-stat"><span class="as-label">Backend saturation</span><span class="as-val good">None</span></div>
+        <div class="ac-row"><span class="ac-key">S1 baseline median</span><span class="ac-val">165.4 ms</span></div>
+        <div class="ac-row"><span class="ac-key">S4 legit median (IDMS on)</span><span class="ac-val">162.9 ms</span></div>
+        <div class="ac-row"><span class="ac-key">IDMS overhead</span><span class="ac-val good">&asymp; 0 ms</span></div>
+        <div class="ac-row"><span class="ac-key">Flood detection</span><span class="ac-val">73.3%</span></div>
+        <div class="ac-row"><span class="ac-key">SQLi detection</span><span class="ac-val">100%</span></div>
+        <div class="ac-row"><span class="ac-key">Ramp step 5 (3-run avg)</span><span class="ac-val">51.5%</span></div>
+        <div class="ac-row"><span class="ac-key">Ramp overall avg</span><span class="ac-val">20.0%</span></div>
+        <div class="ac-row"><span class="ac-key">Backend saturation</span><span class="ac-val good">None</span></div>
       </div>
-
       <div class="algo-col">
         <div class="ac-head">Source Hashing</div>
-        <div class="ac-stat"><span class="as-label">S1 baseline median</span><span class="as-val">174.8 ms</span></div>
-        <div class="ac-stat"><span class="as-label">S4 legit median (IDMS on)</span><span class="as-val">212.1 ms</span></div>
-        <div class="ac-stat"><span class="as-label">IDMS overhead</span><span class="as-val warn">+37.3 ms</span></div>
-        <div class="ac-stat"><span class="as-label">Flood detection</span><span class="as-val">73.3%</span></div>
-        <div class="ac-stat"><span class="as-label">SQLi detection</span><span class="as-val">100%</span></div>
-        <div class="ac-stat"><span class="as-label">Ramp step 5 (avg, 3 runs)</span><span class="as-val">46.3%</span></div>
-        <div class="ac-stat"><span class="as-label">Ramp overall (avg)</span><span class="as-val">16.7%</span></div>
-        <div class="ac-stat"><span class="as-label">Backend saturation</span><span class="as-val bad">Steps 3–5</span></div>
+        <div class="ac-row"><span class="ac-key">S1 baseline median</span><span class="ac-val">174.8 ms</span></div>
+        <div class="ac-row"><span class="ac-key">S4 legit median (IDMS on)</span><span class="ac-val">212.1 ms</span></div>
+        <div class="ac-row"><span class="ac-key">IDMS overhead</span><span class="ac-val warn">+37.3 ms</span></div>
+        <div class="ac-row"><span class="ac-key">Flood detection</span><span class="ac-val">73.3%</span></div>
+        <div class="ac-row"><span class="ac-key">SQLi detection</span><span class="ac-val">100%</span></div>
+        <div class="ac-row"><span class="ac-key">Ramp step 5 (3-run avg)</span><span class="ac-val">46.3%</span></div>
+        <div class="ac-row"><span class="ac-key">Ramp overall avg</span><span class="ac-val">16.7%</span></div>
+        <div class="ac-row"><span class="ac-key">Backend saturation</span><span class="ac-val bad">Steps 3–5</span></div>
       </div>
-
       <div class="algo-col">
         <div class="ac-head">Least Loaded</div>
-        <div class="ac-stat"><span class="as-label">S1 baseline median</span><span class="as-val">200.9 ms</span></div>
-        <div class="ac-stat"><span class="as-label">S4 legit median (IDMS on)</span><span class="as-val">182.3 ms</span></div>
-        <div class="ac-stat"><span class="as-label">IDMS overhead</span><span class="as-val good">&asymp; 0 ms</span></div>
-        <div class="ac-stat"><span class="as-label">Flood detection</span><span class="as-val">73.3%</span></div>
-        <div class="ac-stat"><span class="as-label">SQLi detection</span><span class="as-val">100%</span></div>
-        <div class="ac-stat"><span class="as-label">Ramp step 5 (avg, 3 runs)</span><span class="as-val">52.5%</span></div>
-        <div class="ac-stat"><span class="as-label">Ramp overall (avg)</span><span class="as-val">23.2%</span></div>
-        <div class="ac-stat"><span class="as-label">Backend saturation</span><span class="as-val good">None</span></div>
+        <div class="ac-row"><span class="ac-key">S1 baseline median</span><span class="ac-val">200.9 ms</span></div>
+        <div class="ac-row"><span class="ac-key">S4 legit median (IDMS on)</span><span class="ac-val">182.3 ms</span></div>
+        <div class="ac-row"><span class="ac-key">IDMS overhead</span><span class="ac-val good">&asymp; 0 ms</span></div>
+        <div class="ac-row"><span class="ac-key">Flood detection</span><span class="ac-val">73.3%</span></div>
+        <div class="ac-row"><span class="ac-key">SQLi detection</span><span class="ac-val">100%</span></div>
+        <div class="ac-row"><span class="ac-key">Ramp step 5 (3-run avg)</span><span class="ac-val">52.5%</span></div>
+        <div class="ac-row"><span class="ac-key">Ramp overall avg</span><span class="ac-val">23.2%</span></div>
+        <div class="ac-row"><span class="ac-key">Backend saturation</span><span class="ac-val good">None</span></div>
       </div>
-
     </div>
     <div class="highlight-box green" style="margin-top:16px; font-size:13px;">
-      <b>Key takeaway:</b> Detection rates are consistent across all 3 algorithms &mdash; the IDMS is routing-agnostic for detection purposes.
-      Meaningful algorithm-dependent differences are SH&rsquo;s +37&nbsp;ms overhead (backend queuing from server concentration)
-      and SH backend saturation under ramp (before IDMS acts).
+      <b>Key result:</b> Detection rates are consistent across all 3 algorithms &mdash; the IDMS is routing-agnostic for detection purposes.
+      Meaningful differences are SH's +37ms overhead (backend queuing from server concentration) and SH backend saturation under ramp.
     </div>
   </div>
 
-  <div class="section-label">Honest evaluation</div>
+  <div class="section-sep">Honest evaluation</div>
 
-  <!-- ── Limitations ───────────────────────────────────────────────────── -->
+  <!-- ── Limitations ── -->
   <div class="card">
-    <div class="card-title">Limitations</div>
+    <div class="card-title">Limitations &mdash; click to expand</div>
     <div class="limitations">
-      <div class="limit-card">
-        <div class="lc-num">Limitation 1</div>
-        <div class="lc-title">Single-Node IDMS State</div>
-        <div class="lc-body">
-          All per-IP state (rate windows, anomaly baselines, SQLite blocks) is local to one instance.
-          Horizontal scaling requires centralised state (Redis) or consistent IP-to-instance routing.
-          Standard limitation of inline inspection proxies.
+      <div class="limit-row" onclick="this.classList.toggle('open')">
+        <span class="lr-arrow">&#9658;</span>
+        <div>
+          <div class="lr-title">Single-Node IDMS State</div>
+          <div class="lr-body">All per-IP state (rate windows, anomaly baselines, SQLite blocks) is local to one instance. Horizontal scaling requires centralised state (Redis) or consistent IP-to-instance routing. Standard limitation of inline inspection proxies.</div>
         </div>
       </div>
-      <div class="limit-card">
-        <div class="lc-num">Limitation 2</div>
-        <div class="lc-title">Slow-Rate Detection Requires Environment Calibration</div>
-        <div class="lc-body">
-          Threshold&nbsp;=&nbsp;1.5 is appropriate for low-jitter environments.
-          Docker Desktop on Windows adds 20–80&nbsp;ms jitter that widens IAT baselines and suppresses Z-scores.
-          A frozen baseline (warmup-only, not updated during scoring) or a &ge;120&nbsp;s window would prevent contamination.
+      <div class="limit-row" onclick="this.classList.toggle('open')">
+        <span class="lr-arrow">&#9658;</span>
+        <div>
+          <div class="lr-title">Slow-Rate Detection Requires Calibration</div>
+          <div class="lr-body">Threshold=1.5 is appropriate for low-jitter environments. Docker Desktop on Windows adds 20–80ms jitter that widens IAT baselines and suppresses Z-scores. A frozen baseline (warmup-only, not updated during scoring) or a &ge;120s window would prevent contamination.</div>
         </div>
       </div>
-      <div class="limit-card">
-        <div class="lc-num">Limitation 3</div>
-        <div class="lc-title">Rate-Limit Ceiling Is Structural</div>
-        <div class="lc-body">
-          The first 200 requests in any 10-second window always pass before the block fires.
-          This is unavoidable with a sliding-window rate limiter.
-          Mitigation: lower the threshold, or add a per-connection rate limit.
+      <div class="limit-row" onclick="this.classList.toggle('open')">
+        <span class="lr-arrow">&#9658;</span>
+        <div>
+          <div class="lr-title">Rate-Limit Ceiling Is Structural</div>
+          <div class="lr-body">The first 200 requests in any 10-second window always pass before the block fires. This is unavoidable with a sliding-window rate limiter. Mitigation: lower the threshold, or add a per-connection rate limit before the sliding window.</div>
         </div>
       </div>
-      <div class="limit-card">
-        <div class="lc-num">Limitation 4</div>
-        <div class="lc-title">Controlled Evaluation Environment</div>
-        <div class="lc-body">
-          4 backend servers, simulated traffic patterns, single attacker IP per mode.
-          Real-world traffic is more diverse.
-          Findings characterise system behaviour under controlled conditions, not production traffic patterns.
+      <div class="limit-row" onclick="this.classList.toggle('open')">
+        <span class="lr-arrow">&#9658;</span>
+        <div>
+          <div class="lr-title">Controlled Evaluation Environment</div>
+          <div class="lr-body">4 backend servers, simulated traffic patterns, single attacker IP per mode. Real-world traffic is more diverse. Findings characterise system behaviour under controlled conditions, not production traffic patterns.</div>
         </div>
       </div>
     </div>
   </div>
 
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+// ── Count-up animation on load ─────────────────────────────────────────────
+function countUp(el) {
+  const target   = parseFloat(el.dataset.target);
+  const decimals = parseInt(el.dataset.decimals) || 0;
+  const duration = 1200;
+  const steps    = 50;
+  const inc      = target / steps;
+  let   current  = 0;
+  let   step     = 0;
+  const timer = setInterval(() => {
+    step++;
+    current = Math.min(current + inc, target);
+    el.textContent = current.toFixed(decimals);
+    if (step >= steps) { el.textContent = target.toFixed(decimals); clearInterval(timer); }
+  }, duration / steps);
+}
+
+// Use IntersectionObserver so counters animate when scrolled into view
+const observer = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      e.target.querySelectorAll('.count-up').forEach(countUp);
+      observer.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.3 });
+
+document.querySelectorAll('.findings-hero').forEach(el => observer.observe(el));
+</script>
 {% endblock %}
