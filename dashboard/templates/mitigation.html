@@ -2,12 +2,13 @@
 {% block title %}Mitigation Controller — IDMS Dashboard{% endblock %}
 
 {% block extra_css %}
+
 /* ── Pipeline ── */
 .pipe-row {
   display: flex; align-items: center; justify-content: center; gap: 0; padding: 20px 0;
 }
 .pipe-node {
-  text-align: center; padding: 12px 18px; border-radius: 10px;
+  text-align: center; padding: 14px 18px; border-radius: 10px;
   border: 2px solid var(--border); background: var(--card); min-width: 110px;
   cursor: pointer; transition: border-color 0.2s, box-shadow 0.2s;
 }
@@ -16,17 +17,20 @@
   border-color: var(--p3); background: #fff1f2;
   box-shadow: 0 0 0 4px rgba(219,39,119,0.1);
 }
-.pipe-node.dimmed { opacity: 0.35; }
-.pipe-node .pn-icon  { font-size: 22px; margin-bottom: 4px; }
-.pipe-node .pn-label { font-size: 12px; font-weight: 600; color: var(--text); }
-.pipe-node .pn-sub   { font-size: 10px; color: var(--muted); }
+.pipe-node.dimmed { opacity: 0.4; }
+.pn-tag {
+  display: inline-block; font-size: 10px; font-weight: 800;
+  letter-spacing: 0.4px; padding: 2px 8px; border-radius: 5px;
+  margin-bottom: 7px; background: var(--bg); border: 1px solid var(--border);
+  color: var(--muted);
+}
+.pipe-node.lit .pn-tag { background: #fce7f3; border-color: #f9a8d4; color: var(--p3); }
+.pn-label { font-size: 12px; font-weight: 600; color: var(--text); }
+.pn-sub   { font-size: 10px; color: var(--muted); margin-top: 2px; }
 .pipe-arrow { width: 36px; height: 2px; background: var(--border); position: relative; margin: 0 -1px; flex-shrink:0; }
 .pipe-arrow::after { content:''; position:absolute; right:-5px; top:-4px; border:5px solid transparent; border-left:6px solid var(--border); }
 
 /* ── Interactive decision tree ── */
-.dt-container { padding: 8px 0; }
-
-/* Scenario selector */
 .scenario-bar {
   display: flex; gap: 8px; margin-bottom: 20px; flex-wrap: wrap;
 }
@@ -35,38 +39,64 @@
   border-radius: 8px; padding: 8px 16px; font-size: 12px; font-weight: 600;
   cursor: pointer; font-family: inherit; color: var(--muted); transition: all 0.15s;
 }
-.scn-btn:hover   { border-color: var(--p3); color: var(--p3); background: #fff1f2; }
-.scn-btn.active  { background: var(--p3); border-color: var(--p3); color: #fff; }
+.scn-btn:hover  { border-color: var(--p3); color: var(--p3); background: #fff1f2; }
+.scn-btn.active { background: var(--p3); border-color: var(--p3); color: #fff; }
 
-/* Decision nodes */
 .dt-step {
   display: flex; gap: 12px; align-items: flex-start;
-  padding: 10px 16px; border-radius: 8px; border: 2px solid var(--border);
+  padding: 12px 16px; border-radius: 8px; border: 2px solid var(--border);
   background: var(--card); margin-bottom: 8px; transition: all 0.25s;
-  position: relative;
 }
-.dt-step .ds-icon { font-size: 20px; flex-shrink: 0; margin-top: 1px; }
-.dt-step .ds-body {}
-.dt-step .ds-q    { font-size: 13px; font-weight: 600; color: var(--text); }
-.dt-step .ds-ans  { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.ds-tag {
+  font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 5px;
+  flex-shrink: 0; margin-top: 2px; background: var(--bg);
+  border: 1px solid var(--border); color: var(--muted); white-space: nowrap;
+}
+.dt-step .ds-q   { font-size: 13px; font-weight: 600; color: var(--text); }
+.dt-step .ds-ans { font-size: 12px; color: var(--muted); margin-top: 3px; line-height: 1.5; }
 
-/* Highlight states */
-.dt-step.hi-neutral  { border-color: var(--border); }
-.dt-step.hi-check    { border-color: #93c5fd; background: #eff6ff; }
-.dt-step.hi-pass     { border-color: var(--allow); background: #f0fdf4; }
-.dt-step.hi-block    { border-color: var(--block); background: #fef2f2; }
-.dt-step.hi-honey    { border-color: var(--honeypot); background: #fff7ed; }
-.dt-step.hi-deprio   { border-color: var(--deprio); background: #fffbeb; }
-.dt-step.hi-skip     { opacity: 0.3; }
+.dt-step.hi-neutral { border-color: var(--border); }
+.dt-step.hi-check   { border-color: #93c5fd; background: #eff6ff; }
+.dt-step.hi-pass    { border-color: var(--allow);    background: #f0fdf4; }
+.dt-step.hi-block   { border-color: var(--block);    background: #fef2f2; }
+.dt-step.hi-honey   { border-color: var(--honeypot); background: #fff7ed; }
+.dt-step.hi-deprio  { border-color: var(--deprio);   background: #fffbeb; }
+.dt-step.hi-skip    { opacity: 0.3; }
+
+.dt-step.hi-pass  .ds-tag { background: #dcfce7; border-color: #86efac; color: var(--allow); }
+.dt-step.hi-block .ds-tag { background: #fee2e2; border-color: #fca5a5; color: var(--block); }
+.dt-step.hi-honey .ds-tag { background: #ffedd5; border-color: #fed7aa; color: var(--honeypot); }
+.dt-step.hi-deprio .ds-tag{ background: #fef3c7; border-color: #fde68a; color: var(--deprio); }
+.dt-step.hi-skip  .ds-tag { opacity: 0.3; }
 
 @keyframes dt-flash { 0%{transform:scale(1)} 40%{transform:scale(1.015)} 100%{transform:scale(1)} }
 .dt-step.hi-check, .dt-step.hi-pass, .dt-step.hi-block, .dt-step.hi-honey, .dt-step.hi-deprio {
   animation: dt-flash 0.35s ease;
 }
 
-.dt-connector { width: 2px; height: 14px; background: var(--border); margin: 0 0 0 26px; }
+/* ── YES / NO branches inside each step ── */
+.ds-branches { display: flex; flex-direction: column; gap: 5px; margin-top: 8px; }
+.ds-branch {
+  display: flex; gap: 8px; align-items: center;
+  padding: 5px 10px; border-radius: 5px; border: 1px solid var(--border);
+  font-size: 12px; color: var(--muted); transition: all 0.2s;
+}
+.branch-lbl {
+  font-size: 10px; font-weight: 800; padding: 1px 6px; border-radius: 4px; flex-shrink: 0;
+}
+.branch-lbl.y { background: #dcfce7; color: var(--allow); }
+.branch-lbl.n { background: #fee2e2; color: var(--block); }
 
-/* Verdict bar */
+.ds-branch.faded { opacity: 0.25; }
+.ds-branch.taken { font-weight: 600; }
+.dt-step.hi-block  .ds-branch.taken { border-color: var(--block);    background: #fef2f2; color: var(--block); }
+.dt-step.hi-pass   .ds-branch.taken { border-color: var(--allow);    background: #f0fdf4; color: var(--allow); }
+.dt-step.hi-honey  .ds-branch.taken { border-color: var(--honeypot); background: #fff7ed; color: var(--honeypot); }
+.dt-step.hi-deprio .ds-branch.taken { border-color: var(--deprio);   background: #fffbeb; color: var(--deprio); }
+.dt-step.hi-check  .ds-branch.taken { border-color: #93c5fd;         background: #eff6ff; color: #2563eb; }
+
+.dt-connector { width: 2px; height: 14px; background: var(--border); margin: 0 0 0 28px; }
+
 .verdict-row {
   display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px;
 }
@@ -86,18 +116,6 @@
   background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
   min-height: 36px; margin-top: 12px; line-height: 1.6;
 }
-
-/* ── Escalation bar ── */
-.esc-wrap { display: flex; align-items: center; gap: 12px; margin: 12px 0; }
-.esc-bar {
-  flex: 1; height: 28px; background: var(--bg); border-radius: 6px;
-  border: 1px solid var(--border); overflow: hidden; position: relative;
-}
-.esc-fill {
-  height: 100%; border-radius: 5px; transition: width 0.4s;
-  background: linear-gradient(90deg, #fbbf24, #f59e0b, #dc2626);
-}
-.esc-label { font-size: 12px; font-weight: 600; color: var(--text); min-width: 60px; }
 
 /* ── Expandable rows ── */
 .expand-row {
@@ -119,35 +137,47 @@
 <div class="page">
 
   <div class="page-header">
-    <h2>Mitigation Controller <span style="color:var(--p3)">(Phase 3)</span></h2>
+    <h2>Mitigation Controller <span style="color:var(--p3);">(Phase 3)</span></h2>
     <p>Orchestrates the full pipeline &mdash; decides what to do with every request based on both detection stages</p>
   </div>
 
-  <!-- Pipeline -->
+  <!-- ══ PIPELINE ══════════════════════════════════════════════════════ -->
   <div class="card">
     <div class="card-title">The full request pipeline &mdash; click a stage</div>
     <div class="pipe-row">
-      <div class="pipe-node dimmed" onclick="litNodeM(this,'Client &mdash; all requests originate here and are directed to IDMS port 5001.')">
-        <div class="pn-icon">&#x2328;</div><div class="pn-label">Client</div>
+
+      <div class="pipe-node dimmed" onclick="litNodeM(this,'Client sends all requests to IDMS on port 5001. Its IP is extracted and carried through the full pipeline.')">
+        <div class="pn-tag">CLI</div>
+        <div class="pn-label">Client</div>
       </div>
       <div class="pipe-arrow"></div>
-      <div class="pipe-node lit" onclick="litNodeM(this,'Mitigation Controller (you are here) &mdash; owns the per-request pipeline. Calls rule engine and anomaly engine in sequence, executes the verdict, logs to SQLite, manages timed blocks and escalation.')">
-        <div class="pn-icon">&#x1F6E1;</div>
+
+      <div class="pipe-node lit" onclick="litNodeM(this,'Mitigation Controller (you are here) — owns the per-request pipeline. Calls rule engine and anomaly engine in sequence, executes the verdict, logs to SQLite, manages timed blocks and escalation.')">
+        <div class="pn-tag">MIT</div>
         <div class="pn-label">Mitigation</div>
-        <div class="pn-sub">orchestrator</div>
+        <div class="pn-sub">you are here</div>
       </div>
       <div class="pipe-arrow"></div>
-      <div class="pipe-node dimmed" onclick="litNodeM(this,'Rule Engine (Phase 1) &mdash; called by the Mitigation Controller. Returns a verdict or clean. Short-circuits on first match.')">
-        <div class="pn-icon">&#x1F4CB;</div><div class="pn-label">Rule Engine</div><div class="pn-sub">Phase 1</div>
+
+      <div class="pipe-node dimmed" onclick="litNodeM(this,'Rule Engine (Phase 1) is called by the Mitigation Controller. Returns a verdict or clean. Short-circuits on the first matching rule.')">
+        <div class="pn-tag">P1</div>
+        <div class="pn-label">Rule Engine</div>
+        <div class="pn-sub">Phase 1</div>
       </div>
       <div class="pipe-arrow"></div>
-      <div class="pipe-node dimmed" onclick="litNodeM(this,'Anomaly Engine (Phase 2) &mdash; only called if all rule checks pass. Returns a Z-score and deprioritise/allow verdict.')">
-        <div class="pn-icon">&#x1F4CA;</div><div class="pn-label">Anomaly Engine</div><div class="pn-sub">Phase 2</div>
+
+      <div class="pipe-node dimmed" onclick="litNodeM(this,'Anomaly Engine (Phase 2) is only called if all rule checks pass. Returns a Z-score and deprioritise or allow verdict.')">
+        <div class="pn-tag">P2</div>
+        <div class="pn-label">Anomaly Engine</div>
+        <div class="pn-sub">Phase 2</div>
       </div>
       <div class="pipe-arrow"></div>
-      <div class="pipe-node dimmed" onclick="litNodeM(this,'Load Balancer &mdash; receives the forwarded request. Never called for blocked or honeypotted traffic.')">
-        <div class="pn-icon">&#x2696;</div><div class="pn-label">Load Balancer</div>
+
+      <div class="pipe-node dimmed" onclick="litNodeM(this,'Load Balancer receives the forwarded request. Never called for blocked or honeypotted traffic.')">
+        <div class="pn-tag">LB</div>
+        <div class="pn-label">Load Balancer</div>
       </div>
+
     </div>
     <div id="pipe-tip-m" style="display:none;" class="highlight-box rose"></div>
     <div class="highlight-box rose">
@@ -156,49 +186,69 @@
     </div>
   </div>
 
-  <!-- Interactive decision tree -->
+  <!-- ══ DECISION TREE ════════════════════════════════════════════════ -->
   <div class="card">
     <div class="card-title">Decision tree &mdash; pick a request type to walk through the pipeline</div>
 
     <div class="scenario-bar">
-      <button class="scn-btn" onclick="runDT('blocked')">Already-Blocked IP</button>
-      <button class="scn-btn" onclick="runDT('sqli')">SQL Injection</button>
-      <button class="scn-btn" onclick="runDT('anomaly')">Burst Anomaly</button>
-      <button class="scn-btn" onclick="runDT('clean')">Clean Request</button>
+      <button class="scn-btn" onclick="runDT('blocked', this)">Already-Blocked IP</button>
+      <button class="scn-btn" onclick="runDT('sqli', this)">SQL Injection</button>
+      <button class="scn-btn" onclick="runDT('anomaly', this)">Burst Anomaly</button>
+      <button class="scn-btn" onclick="runDT('clean', this)">Clean Request</button>
     </div>
 
-    <div class="dt-container">
+    <div id="dt-steps">
+
+      <!-- S1: block check -->
       <div class="dt-step hi-neutral" id="dt-1">
-        <div class="ds-icon">&#x1F6D1;</div>
+        <div class="ds-tag" id="dt-1-tag">S1</div>
         <div class="ds-body">
-          <div class="ds-q">Step 1 &mdash; Is this IP currently blocked?</div>
-          <div class="ds-ans" id="dt-1-ans">Checks the SQLite ip_reputation table for an active block with unexpired unblock_at timestamp.</div>
+          <div class="ds-q">Is this IP currently blocked?</div>
+          <div class="ds-branches">
+            <div class="ds-branch" id="dt-1-yes"><span class="branch-lbl y">YES</span><span id="dt-1-yes-txt">Short-circuit — return 403. No detection cycles wasted.</span></div>
+            <div class="ds-branch" id="dt-1-no"><span class="branch-lbl n">NO</span><span id="dt-1-no-txt">No active block — proceed to Rule Engine.</span></div>
+          </div>
         </div>
       </div>
       <div class="dt-connector"></div>
+
+      <!-- S2: rule engine -->
       <div class="dt-step hi-neutral" id="dt-2">
-        <div class="ds-icon">&#x1F4CB;</div>
+        <div class="ds-tag" id="dt-2-tag">S2</div>
         <div class="ds-body">
-          <div class="ds-q">Step 2 &mdash; Run Rule Engine (Phase 1)</div>
-          <div class="ds-ans" id="dt-2-ans">Check auth, injection, rate, scan, payload in priority order. Short-circuit on first match.</div>
+          <div class="ds-q">Does the Rule Engine flag this request? (Phase 1)</div>
+          <div class="ds-branches">
+            <div class="ds-branch" id="dt-2-yes"><span class="branch-lbl y">YES</span><span id="dt-2-yes-txt">Rule matched — verdict assigned. Skip anomaly engine.</span></div>
+            <div class="ds-branch" id="dt-2-no"><span class="branch-lbl n">NO</span><span id="dt-2-no-txt">All rules pass — continue to Anomaly Engine.</span></div>
+          </div>
         </div>
       </div>
       <div class="dt-connector"></div>
+
+      <!-- S3: anomaly engine -->
       <div class="dt-step hi-neutral" id="dt-3">
-        <div class="ds-icon">&#x1F4CA;</div>
+        <div class="ds-tag" id="dt-3-tag">S3</div>
         <div class="ds-body">
-          <div class="ds-q">Step 3 &mdash; Run Anomaly Engine (Phase 2)</div>
-          <div class="ds-ans" id="dt-3-ans">Only reached if all rule checks pass. Score IAT against per-IP baseline using modified Z-score.</div>
+          <div class="ds-q">Does the Anomaly Engine flag this request? (Phase 2)</div>
+          <div class="ds-branches">
+            <div class="ds-branch" id="dt-3-yes"><span class="branch-lbl y">YES</span><span id="dt-3-yes-txt">Z-score exceeds threshold — suspicious timing detected.</span></div>
+            <div class="ds-branch" id="dt-3-no"><span class="branch-lbl n">NO</span><span id="dt-3-no-txt">Z-score within normal range — request is clean.</span></div>
+          </div>
         </div>
       </div>
       <div class="dt-connector"></div>
+
+      <!-- S4: verdict -->
       <div class="dt-step hi-neutral" id="dt-4">
-        <div class="ds-icon">&#x2696;</div>
+        <div class="ds-tag" id="dt-4-tag">S4</div>
         <div class="ds-body">
-          <div class="ds-q">Step 4 &mdash; Execute verdict</div>
-          <div class="ds-ans" id="dt-4-ans">Act on the combined result. Log to SQLite. Increment counters.</div>
+          <div class="ds-q">Execute verdict</div>
+          <div class="ds-branches">
+            <div class="ds-branch" id="dt-4-act"><span class="branch-lbl y">ACT</span><span id="dt-4-act-txt">Act on result — log to SQLite, increment counters, forward or reject.</span></div>
+          </div>
         </div>
       </div>
+
     </div>
 
     <div class="verdict-row">
@@ -211,79 +261,62 @@
     <div id="dt-caption">Select a request type above to walk through the decision tree.</div>
   </div>
 
-  <!-- Escalation -->
+  <!-- ══ ESCALATION ═══════════════════════════════════════════════════ -->
   <div class="card">
     <div class="card-title">Escalation: deprioritise strikes &rarr; auto-block</div>
-    <div class="row-2">
-      <div>
-        <p style="font-size:13px; color:var(--muted); line-height:1.7; margin-bottom:14px;">
-          A single anomalous request is <b>deprioritised</b> (forwarded but tagged).
-          Repeated anomalies from the same IP indicate sustained suspicious activity.
-          The escalation system tracks strikes in a sliding window &mdash;
-          when the count reaches the threshold, the IP is automatically upgraded to a full timed block.
-        </p>
-        <div class="expand-row" onclick="this.classList.toggle('open')">
-          <span class="er-arrow">&#9658;</span>
-          <div>
-            <div class="er-title">Strike threshold: 8 strikes</div>
-            <div class="er-sub">Why not 1? Why not 20?</div>
-            <div class="er-body">Set to 8 to provide a small buffer against jitter false positives (occasional high-Z requests that aren't attacks) while still firing reliably when 50 concurrent burst requests arrive. A threshold of 1 would block on any anomalous request, causing false positives during normal traffic variation.</div>
-          </div>
-        </div>
-        <div class="expand-row" onclick="this.classList.toggle('open')">
-          <span class="er-arrow">&#9658;</span>
-          <div>
-            <div class="er-title">Window: 120 seconds</div>
-            <div class="er-sub">Old strikes expire and don't haunt the IP</div>
-            <div class="er-body">A brief network anomaly generating 3 strikes shouldn't result in a block 10 minutes later. The 120s sliding window means only recent strikes count. Strikes older than 120s are evicted from the deque, giving the IP a clean slate over time.</div>
-          </div>
-        </div>
-        <div class="expand-row" onclick="this.classList.toggle('open')">
-          <span class="er-arrow">&#9658;</span>
-          <div>
-            <div class="er-title">Block duration: 30 seconds</div>
-            <div class="er-sub">Short for demo repeatability; production would be 5&ndash;15 min</div>
-            <div class="er-body">30 seconds lets the demo be repeated without long waits. In a production system, escalation blocks would typically be 5–15 minutes. The duration is configurable via the /idms/config endpoint.</div>
-          </div>
-        </div>
-      </div>
-      <div>
-        <div style="font-size:13px; font-weight:600; margin-bottom:12px;">Escalation meter (interactive)</div>
-        <div class="esc-wrap">
-          <span class="esc-label" id="esc-count">0 / 8</span>
-          <div class="esc-bar">
-            <div class="esc-fill" id="esc-fill" style="width:0%"></div>
-          </div>
-        </div>
-        <div style="display:flex; gap:8px; margin-top:10px;">
-          <button class="btn btn-purple" onclick="addStrike()">+ Add Strike</button>
-          <button class="btn btn-gray"   onclick="resetStrikes()">Reset</button>
-        </div>
-        <div id="esc-msg" style="margin-top:12px; font-size:13px; color:var(--muted); min-height:20px;"></div>
+    <p style="font-size:13px; color:var(--muted); line-height:1.7; margin-bottom:16px;">
+      A single anomalous request is <b>deprioritised</b> (forwarded but tagged).
+      Repeated anomalies from the same IP indicate sustained suspicious activity.
+      The escalation system tracks strikes in a sliding window &mdash;
+      when the count reaches the threshold, the IP is automatically upgraded to a full timed block.
+    </p>
 
-        <div style="margin-top:20px;">
-          <table>
-            <thead><tr><th>Severity</th><th>Duration</th><th>Trigger</th></tr></thead>
-            <tbody>
-              <tr><td><span class="badge badge-amber">Medium</span></td><td>60s</td><td style="color:var(--muted);font-size:12px">Wrong API key, oversized payload</td></tr>
-              <tr><td><span class="badge badge-red">High</span></td><td>5 min</td><td style="color:var(--muted);font-size:12px">Rate limit, escalated anomaly</td></tr>
-              <tr><td><span class="badge badge-purple">Critical</span></td><td>15 min</td><td style="color:var(--muted);font-size:12px">SQL injection (if block chosen)</td></tr>
-              <tr><td><span class="badge badge-orange">Escalation</span></td><td>30s</td><td style="color:var(--muted);font-size:12px">8 strikes in 120s window</td></tr>
-            </tbody>
-          </table>
-        </div>
+    <div class="expand-row" onclick="this.classList.toggle('open')">
+      <span class="er-arrow">&#9658;</span>
+      <div>
+        <div class="er-title">Strike threshold: 8 strikes</div>
+        <div class="er-sub">Why not 1? Why not 20?</div>
+        <div class="er-body">Set to 8 to provide a small buffer against jitter false positives (occasional high-Z requests that are not attacks) while still firing reliably when 50 concurrent burst requests arrive. A threshold of 1 would block on any anomalous request, causing false positives during normal traffic variation.</div>
       </div>
+    </div>
+    <div class="expand-row" onclick="this.classList.toggle('open')">
+      <span class="er-arrow">&#9658;</span>
+      <div>
+        <div class="er-title">Window: 120 seconds</div>
+        <div class="er-sub">Old strikes expire and don't haunt the IP</div>
+        <div class="er-body">A brief network anomaly generating 3 strikes should not result in a block 10 minutes later. The 120s sliding window means only recent strikes count. Strikes older than 120s are evicted from the deque, giving the IP a clean slate over time.</div>
+      </div>
+    </div>
+    <div class="expand-row" onclick="this.classList.toggle('open')">
+      <span class="er-arrow">&#9658;</span>
+      <div>
+        <div class="er-title">Block duration: 30 seconds</div>
+        <div class="er-sub">Short for demo repeatability; production would be 5&ndash;15 min</div>
+        <div class="er-body">30 seconds lets the demo be repeated without long waits. In a production system, escalation blocks would typically be 5–15 minutes. The duration is configurable via the /idms/config endpoint.</div>
+      </div>
+    </div>
+
+    <div style="margin-top:16px;">
+      <table>
+        <thead><tr><th>Severity</th><th>Duration</th><th>Trigger</th></tr></thead>
+        <tbody>
+          <tr><td><span class="badge badge-amber">Medium</span></td><td>60s</td><td style="color:var(--muted);font-size:12px;">Wrong API key, oversized payload</td></tr>
+          <tr><td><span class="badge badge-red">High</span></td><td>5 min</td><td style="color:var(--muted);font-size:12px;">Rate limit, escalated anomaly</td></tr>
+          <tr><td><span class="badge badge-purple">Critical</span></td><td>15 min</td><td style="color:var(--muted);font-size:12px;">SQL injection (if block chosen)</td></tr>
+          <tr><td><span class="badge badge-orange">Escalation</span></td><td>30s</td><td style="color:var(--muted);font-size:12px;">8 strikes in 120s window</td></tr>
+        </tbody>
+      </table>
     </div>
   </div>
 
-  <!-- Persistence -->
+  <!-- ══ PERSISTENCE ════════════════════════════════════════════════════ -->
   <div class="card">
     <div class="card-title">State management &mdash; click each store to see what it holds</div>
     <div class="row-2">
       <div class="expand-row" style="flex-direction:column;" onclick="this.classList.toggle('open')">
         <div style="display:flex; gap:10px; align-items:center; width:100%;">
           <span class="er-arrow">&#9658;</span>
-          <div style="flex:1">
+          <div style="flex:1;">
             <div class="er-title">SQLite Database (persistent)</div>
             <div class="er-sub">Survives container restarts &mdash; stored in Docker volume</div>
           </div>
@@ -299,7 +332,7 @@
       <div class="expand-row" style="flex-direction:column;" onclick="this.classList.toggle('open')">
         <div style="display:flex; gap:10px; align-items:center; width:100%;">
           <span class="er-arrow">&#9658;</span>
-          <div style="flex:1">
+          <div style="flex:1;">
             <div class="er-title">In-Memory State (fast path)</div>
             <div class="er-sub">Cleared on reset &mdash; rebuilt from new traffic</div>
           </div>
@@ -329,65 +362,115 @@ function litNodeM(el, tip) {
 }
 
 // ── Interactive decision tree ─────────────────────────────────────────────
+// branch: 'yes' | 'no' | 'skip' (whole step dimmed) | 'act' (S4 action only)
 const DT_SCENARIOS = {
   blocked: {
-    label: 'Already-Blocked IP',
     steps: [
-      { id:'1', cls:'hi-block', q:'Step 1 — Is this IP currently blocked?', ans:'YES — unblock_at is in the future. Short-circuit immediately.' },
-      { id:'2', cls:'hi-skip',  q:'Step 2 — Rule Engine', ans:'Skipped — blocked IPs never reach detection.' },
-      { id:'3', cls:'hi-skip',  q:'Step 3 — Anomaly Engine', ans:'Skipped.' },
-      { id:'4', cls:'hi-block', q:'Step 4 — Verdict: Block', ans:'Return 403. Increment block counter. No SQLite write (already logged).' },
+      { id:'1', cls:'hi-block',
+        branch:'yes',
+        yes:'unblock_at is in the future — short-circuit. Return 403 immediately.',
+        no:'No active block — proceed to Rule Engine.' },
+      { id:'2', cls:'hi-skip',
+        branch:'skip',
+        yes:'Rule matched — verdict assigned.',
+        no:'All rules pass — continue to Anomaly Engine.' },
+      { id:'3', cls:'hi-skip',
+        branch:'skip',
+        yes:'Z-score exceeds threshold — suspicious timing.',
+        no:'Z-score normal — request is clean.' },
+      { id:'4', cls:'hi-block',
+        branch:'act',
+        act:'Return 403. Increment block counter. No SQLite write (already logged on first block).' },
     ],
     verdict: 'block',
-    caption: 'Short-circuit saves all detection work. A blocked IP consumes almost no CPU — just a DB read. This is why the block check runs first.',
+    caption: 'Short-circuit saves all detection work. A blocked IP consumes almost no CPU — just a single DB read. This is why the block check runs first.',
   },
   sqli: {
-    label: 'SQL Injection',
     steps: [
-      { id:'1', cls:'hi-pass',  q:'Step 1 — Is this IP currently blocked?', ans:'No active block. Continue.' },
-      { id:'2', cls:'hi-honey', q:'Step 2 — Rule Engine fires at P2', ans:'Injection pattern matched. Verdict: Honeypot.' },
-      { id:'3', cls:'hi-skip',  q:'Step 3 — Anomaly Engine', ans:'Skipped — rule engine already decided.' },
-      { id:'4', cls:'hi-honey', q:'Step 4 — Verdict: Honeypot', ans:'Forward to honeypot:5002. Log event. Attacker gets fake 200 OK.' },
+      { id:'1', cls:'hi-pass',
+        branch:'no',
+        yes:'unblock_at is in the future — short-circuit.',
+        no:'No active block — proceed to Rule Engine.' },
+      { id:'2', cls:'hi-honey',
+        branch:'yes',
+        yes:'Injection pattern matched (num1 contains SQL fragment) — verdict: Honeypot.',
+        no:'All rules pass — continue to Anomaly Engine.' },
+      { id:'3', cls:'hi-skip',
+        branch:'skip',
+        yes:'Z-score exceeds threshold.',
+        no:'Z-score normal.' },
+      { id:'4', cls:'hi-honey',
+        branch:'act',
+        act:'Forward to honeypot:5002. Attacker receives a convincing fake 200 OK. Log event to SQLite.' },
     ],
     verdict: 'honey',
-    caption: 'Rule engine catches it at P2. The anomaly engine is never called. The attacker receives a convincing fake success — they may keep sending, revealing more of their tooling.',
+    caption: 'Rule engine catches it at Phase 1. The anomaly engine is never called. The attacker receives a fake success — they may keep probing, revealing more of their tooling.',
   },
   anomaly: {
-    label: 'Burst Anomaly',
     steps: [
-      { id:'1', cls:'hi-pass',  q:'Step 1 — Is this IP currently blocked?', ans:'No active block. Continue.' },
-      { id:'2', cls:'hi-pass',  q:'Step 2 — Rule Engine: all checks pass', ans:'Auth valid. No injection. Under rate limit. No scan. Normal payload.' },
-      { id:'3', cls:'hi-deprio',q:'Step 3 — Anomaly Engine: Z-score > 1.5', ans:'IAT acceleration detected. Computed Z = 3.2 (threshold 1.5). Verdict: Deprioritise.' },
-      { id:'4', cls:'hi-deprio',q:'Step 4 — Verdict: Deprioritise + Strike', ans:'Forward with X-IDMS-Tag header. Increment strike counter. If strikes >= 8 in 120s → escalate to block.' },
+      { id:'1', cls:'hi-pass',
+        branch:'no',
+        yes:'unblock_at is in the future — short-circuit.',
+        no:'No active block — proceed to Rule Engine.' },
+      { id:'2', cls:'hi-pass',
+        branch:'no',
+        yes:'Rule matched — verdict assigned.',
+        no:'Auth valid. No injection. Under rate limit. Normal payload — continue to Anomaly Engine.' },
+      { id:'3', cls:'hi-deprio',
+        branch:'yes',
+        yes:'Z = 3.2 exceeds threshold 1.5 — IAT acceleration detected. Verdict: Deprioritise.',
+        no:'Z-score normal — request is clean.' },
+      { id:'4', cls:'hi-deprio',
+        branch:'act',
+        act:'Forward with X-IDMS-Tag header. Log strike. If strikes ≥ 8 in 120s → escalate to full block.' },
     ],
     verdict: 'deprio',
-    caption: 'The request looks rule-clean but its timing is suspicious. Deprioritise lets it through while logging a strike. After 8 strikes within 120s, the IP is auto-blocked for 30 seconds.',
+    caption: 'The request looks rule-clean but its timing is suspicious. Deprioritise lets it through while logging a strike. After 8 strikes within 120s, the IP is auto-blocked.',
   },
   clean: {
-    label: 'Clean Request',
     steps: [
-      { id:'1', cls:'hi-pass', q:'Step 1 — Is this IP currently blocked?', ans:'No active block. Continue.' },
-      { id:'2', cls:'hi-pass', q:'Step 2 — Rule Engine: all checks pass', ans:'Auth valid. No injection. Under rate limit. No scan. Normal payload.' },
-      { id:'3', cls:'hi-pass', q:'Step 3 — Anomaly Engine: normal IAT', ans:'Z-score = 0.31 (threshold 1.5). IAT consistent with baseline. Allow.' },
-      { id:'4', cls:'hi-allow',q:'Step 4 — Verdict: Allow', ans:'Forward to load balancer normally. Increment allow counter. No SQLite write for clean traffic.' },
+      { id:'1', cls:'hi-pass',
+        branch:'no',
+        yes:'unblock_at is in the future — short-circuit.',
+        no:'No active block — proceed to Rule Engine.' },
+      { id:'2', cls:'hi-pass',
+        branch:'no',
+        yes:'Rule matched — verdict assigned.',
+        no:'Auth valid. No injection. Under rate limit. Normal payload — continue to Anomaly Engine.' },
+      { id:'3', cls:'hi-pass',
+        branch:'no',
+        yes:'Z-score exceeds threshold — suspicious timing.',
+        no:'Z = 0.31, below threshold 1.5 — IAT consistent with baseline. Allow.' },
+      { id:'4', cls:'hi-allow',
+        branch:'act',
+        act:'Forward to load balancer normally. Increment allow counter. No SQLite write — detection log only records flagged events.' },
     ],
     verdict: 'allow',
-    caption: 'Both stages pass. Total inspect time: ~1ms. No SQLite write needed — detection log only records flagged events, keeping write volume low.',
+    caption: 'Both stages pass. Total inspect time: ~1ms. Clean traffic flows through with minimal overhead.',
   },
 };
 
+function resetBranches(id) {
+  ['yes','no'].forEach(b => {
+    const el = document.getElementById('dt-' + id + '-' + b);
+    if (el) el.className = 'ds-branch';
+  });
+  const act = document.getElementById('dt-' + id + '-act');
+  if (act) act.className = 'ds-branch';
+}
+
 let dtRunning = false;
-function runDT(scenario) {
+function runDT(scenario, btn) {
   if (dtRunning) return;
   dtRunning = true;
 
   document.querySelectorAll('.scn-btn').forEach(b => b.classList.remove('active'));
-  event.target.classList.add('active');
+  if (btn) btn.classList.add('active');
 
-  // Reset
   [1,2,3,4].forEach(i => {
-    const el = document.getElementById('dt-' + i);
-    el.className = 'dt-step hi-neutral';
+    document.getElementById('dt-' + i).className = 'dt-step hi-neutral';
+    document.getElementById('dt-' + i + '-tag').textContent = 'S' + i;
+    resetBranches(i);
   });
   document.querySelectorAll('.verdict-chip').forEach(v => v.className = 'verdict-chip hi-skip');
   document.getElementById('dt-caption').textContent = 'Running...';
@@ -397,39 +480,43 @@ function runDT(scenario) {
     setTimeout(() => {
       const el = document.getElementById('dt-' + step.id);
       el.className = 'dt-step ' + step.cls;
-      document.getElementById('dt-' + step.id + '-ans').textContent = step.ans;
+
+      if (step.branch === 'skip') {
+        // whole step dimmed — both branches neutral faded
+        ['yes','no'].forEach(b => {
+          const br = document.getElementById('dt-' + step.id + '-' + b);
+          if (br) br.className = 'ds-branch faded';
+        });
+      } else if (step.branch === 'act') {
+        const actEl = document.getElementById('dt-' + step.id + '-act');
+        if (actEl) {
+          document.getElementById('dt-' + step.id + '-act-txt').textContent = step.act;
+          actEl.className = 'ds-branch taken';
+        }
+      } else {
+        // yes or no
+        const taken = step.branch;       // 'yes' or 'no'
+        const other = taken === 'yes' ? 'no' : 'yes';
+        const takenEl = document.getElementById('dt-' + step.id + '-' + taken);
+        const otherEl = document.getElementById('dt-' + step.id + '-' + other);
+        if (takenEl) {
+          document.getElementById('dt-' + step.id + '-' + taken + '-txt').textContent = step[taken];
+          takenEl.className = 'ds-branch taken';
+        }
+        if (otherEl) {
+          document.getElementById('dt-' + step.id + '-' + other + '-txt').textContent = step[other];
+          otherEl.className = 'ds-branch faded';
+        }
+      }
+
       if (i === sc.steps.length - 1) {
-        // Highlight verdict chip
         const chip = document.getElementById('vt-' + sc.verdict);
         if (chip) chip.className = 'verdict-chip hi-' + sc.verdict;
         document.getElementById('dt-caption').textContent = sc.caption;
         dtRunning = false;
       }
-    }, i * 380);
+    }, i * 420);
   });
-}
-
-// ── Escalation ────────────────────────────────────────────────────────────
-let strikes = 0;
-function addStrike() {
-  if (strikes >= 8) return;
-  strikes++;
-  const pct = (strikes / 8) * 100;
-  document.getElementById('esc-fill').style.width = pct + '%';
-  document.getElementById('esc-count').textContent = strikes + ' / 8';
-  const msg = document.getElementById('esc-msg');
-  if (strikes >= 8) {
-    msg.innerHTML = '<span style="color:var(--block);font-weight:600;">ESCALATION &mdash; IP auto-blocked for 30 seconds</span>';
-  } else {
-    msg.textContent = strikes + ' of 8 strikes. ' + (8 - strikes) + ' more to escalation.';
-    msg.style.color = '#d97706';
-  }
-}
-function resetStrikes() {
-  strikes = 0;
-  document.getElementById('esc-fill').style.width = '0%';
-  document.getElementById('esc-count').textContent = '0 / 8';
-  document.getElementById('esc-msg').textContent = '';
 }
 </script>
 {% endblock %}

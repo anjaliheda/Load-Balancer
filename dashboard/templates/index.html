@@ -2,78 +2,193 @@
 {% block title %}Live Demo — IDMS Dashboard{% endblock %}
 
 {% block extra_css %}
-/* ── Status bar ── */
-.status-bar {
-  display: flex; align-items: center; gap: 32px; flex-wrap: wrap;
+
+/* ── System health strip ── */
+.health-strip {
+  display: flex; align-items: center; gap: 0; flex-wrap: wrap;
 }
-.s-item { font-size: 13px; display: flex; align-items: center; gap: 6px; }
-.s-item label { color: var(--muted); }
-.s-dot {
-  width: 8px; height: 8px; border-radius: 50%;
-  display: inline-block; background: var(--light);
+.health-seg {
+  display: flex; align-items: center; gap: 12px;
+  padding: 4px 28px 4px 0; margin-right: 28px;
+  border-right: 1px solid var(--border);
 }
-.s-dot.ok   { background: var(--allow); }
-.s-dot.down { background: var(--block); }
-.s-val { font-weight: 500; }
-.s-val.ok   { color: var(--allow); }
-.s-val.down { color: var(--block); }
+.health-seg:last-child { border-right: none; padding-right: 0; margin-right: 0; margin-left: auto; }
+.h-dot {
+  width: 16px; height: 16px; border-radius: 50%;
+  background: #d1d5db; flex-shrink: 0; transition: background 0.4s;
+}
+.h-dot.ok {
+  background: var(--allow);
+  animation: pulse-green 2.5s ease infinite;
+}
+.h-dot.down { background: var(--block); }
+@keyframes pulse-green {
+  0%,100% { box-shadow: 0 0 0 3px rgba(22,163,74,0.2); }
+  50%      { box-shadow: 0 0 0 8px rgba(22,163,74,0.05); }
+}
+.h-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 3px; }
+.h-val   { font-size: 14px; font-weight: 600; }
+.h-val.ok   { color: var(--allow); }
+.h-val.down { color: var(--block); }
+.h-val.neutral { color: var(--text); }
+
+/* Server mini-grid */
+.srv-mini-row { display: flex; gap: 5px; margin-top: 4px; }
+.srv-mini {
+  width: 26px; height: 26px; border-radius: 6px;
+  background: #f3f4f6; border: 2px solid #e5e7eb;
+  font-size: 10px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted); transition: all 0.35s;
+}
+.srv-mini.up   { background: #dcfce7; border-color: #86efac; color: #15803d; }
+.srv-mini.down { background: #fee2e2; border-color: #fca5a5; color: #dc2626; }
+
+/* Threat badge */
+.threat-wrap { text-align: right; }
+.threat-badge {
+  display: inline-block; padding: 5px 14px; border-radius: 20px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.6px;
+  text-transform: uppercase; transition: all 0.5s;
+}
+.tb-idle   { background: #f3f4f6; color: #9ca3af; }
+.tb-ok     { background: #dcfce7; color: #15803d; }
+.tb-warn   { background: #fef3c7; color: #b45309; animation: tb-blink 1.6s ease infinite; }
+.tb-alert  { background: #fee2e2; color: #dc2626; animation: tb-blink 0.85s ease infinite; }
+@keyframes tb-blink { 0%,100%{opacity:1} 50%{opacity:0.65} }
+#last-updated { font-size: 11px; color: var(--light); margin-top: 5px; }
 
 select {
   background: var(--bg); color: var(--text); border: 1px solid var(--border);
-  padding: 5px 10px; font-size: 13px; border-radius: 6px; cursor: pointer; outline: none;
+  padding: 6px 10px; font-size: 13px; border-radius: 6px; cursor: pointer; outline: none;
 }
 select:focus { border-color: var(--accent); }
 
-/* ── Demo panel ── */
-.demo-panel { display: flex; flex-direction: column; gap: 14px; }
-.demo-row {
-  display: flex; align-items: flex-start; gap: 20px;
-  padding: 16px 18px; border: 1px solid var(--border);
-  border-radius: 8px; background: var(--bg);
+/* ── Scenario table ── */
+.scenario-table { width: 100%; border-collapse: collapse; }
+.scenario-table tbody tr {
+  border-bottom: 1px solid var(--border);
+  transition: background 0.12s;
 }
-.demo-label { min-width: 180px; }
-.phase-pill {
-  display: inline-block; font-size: 11px; font-weight: 700;
-  letter-spacing: 0.5px; padding: 3px 10px; border-radius: 20px; margin-bottom: 6px;
+.scenario-table tbody tr:last-child { border-bottom: none; }
+.scenario-table tbody tr:hover { background: #f8fafc; }
+.scenario-table tbody tr.firing { opacity: 0.5; pointer-events: none; }
+
+.sc-phase-tag {
+  display: inline-block; padding: 2px 7px; border-radius: 4px;
+  font-size: 10px; font-weight: 700; letter-spacing: 0.3px;
+  white-space: nowrap;
 }
-.pill-p1 { background: #ede9fe; color: var(--p1); }
-.pill-p2 { background: #d1fae5; color: var(--p2); }
-.pill-p3 { background: #fce7f3; color: var(--p3); }
-.demo-label .dl-name  { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 2px; }
-.demo-label .dl-desc  { font-size: 12px; color: var(--muted); }
-.demo-buttons { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
-.btn-p1    { background: #ede9fe; color: var(--p1); }
-.btn-p2    { background: #d1fae5; color: var(--p2); }
-.btn-reset { background: #f3f4f6; color: var(--muted); }
-.btn-hint  { font-size: 11px; color: var(--light); font-style: italic; }
-#demo-status {
-  font-size: 13px; color: var(--muted); padding: 10px 14px;
-  background: var(--bg); border: 1px solid var(--border);
-  border-radius: 6px; min-height: 38px; line-height: 1.5;
+.sc-phase-tag.p1 { background: #ede9fe; color: var(--p1); }
+.sc-phase-tag.p2 { background: #d1fae5; color: #059669; }
+
+.sc-name { font-size: 13px; font-weight: 600; color: var(--text); }
+.sc-desc-cell { font-size: 12px; color: var(--muted); line-height: 1.5; }
+.sc-outcome-cell { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+.sc-btn {
+  padding: 5px 14px; border: 1px solid var(--border); border-radius: 5px;
+  background: var(--bg); color: var(--text);
+  font-family: inherit; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: border-color 0.12s, background 0.12s, color 0.12s;
+  white-space: nowrap; display: inline-flex; align-items: center; gap: 5px;
+}
+.sc-btn:hover { border-color: #6b7280; background: #1a1d23; color: #f4f6f9; }
+
+.sc-reset-row td { padding: 10px 14px; }
+.sc-reset-btn {
+  padding: 5px 14px; border: 1px solid var(--border); border-radius: 5px;
+  background: var(--bg); color: var(--muted);
+  font-family: inherit; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: border-color 0.12s, background 0.12s, color 0.12s;
+  display: inline-flex; align-items: center; gap: 5px;
+}
+.sc-reset-btn:hover { border-color: #6b7280; background: #6b7280; color: #fff; }
+
+/* Spinner inside button */
+@keyframes spin { to { transform: rotate(360deg); } }
+.sc-spinner {
+  width: 11px; height: 11px; border: 2px solid currentColor;
+  border-top-color: transparent; border-radius: 50%;
+  animation: spin 0.65s linear infinite; flex-shrink: 0;
 }
 
-/* ── Counters ── */
-.counters { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
-.counter {
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 8px; padding: 20px 20px 16px;
-  box-shadow: var(--shadow); border-left: 4px solid var(--border);
+/* ── Warmup indicator ── */
+.warmup-strip {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--bg);
+  margin-top: 14px; font-size: 13px;
 }
-.counter .c-label { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 2px; }
-.counter .c-sublabel { font-size: 11px; color: var(--light); margin-bottom: 10px; }
-.counter .c-value { font-size: 42px; font-weight: 700; line-height: 1; }
-.counter .c-pct   { font-size: 11px; color: var(--muted); margin-top: 6px; }
-.c-allow  { border-left-color: var(--allow); } .c-allow  .c-value { color: var(--allow); }
-.c-block  { border-left-color: var(--block); } .c-block  .c-value { color: var(--block); }
-.c-honey  { border-left-color: var(--honeypot); } .c-honey  .c-value { color: var(--honeypot); }
-.c-deprio { border-left-color: var(--deprio); } .c-deprio .c-value { color: var(--deprio); }
+.wu-dot {
+  width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0;
+  background: #d1d5db;
+}
+.wu-dot.warming { background: #f59e0b; animation: wu-pulse 1.5s ease infinite; }
+.wu-dot.ready   { background: var(--allow); }
+@keyframes wu-pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+.wu-label { font-weight: 600; color: var(--text); }
+.wu-detail { color: var(--muted); margin-left: 4px; }
+.wu-bar-wrap {
+  flex: 1; height: 5px; background: #e5e7eb; border-radius: 3px;
+  overflow: hidden; min-width: 60px; max-width: 120px;
+}
+.wu-bar {
+  height: 100%; background: #f59e0b; border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.wu-bar.ready { background: var(--allow); }
+
+/* ── Demo status box ── */
+.demo-status-box {
+  padding: 11px 16px; border-radius: 6px;
+  border-left: 3px solid var(--border); background: var(--bg);
+  transition: border-color 0.25s, background 0.25s;
+  margin-top: 12px;
+}
+.demo-status-box.st-running { border-left-color: #93c5fd; background: #f8fbff; }
+.demo-status-box.st-ok      { border-left-color: #86efac; background: #f9fffe; }
+.demo-status-box.st-error   { border-left-color: #fca5a5; background: #fffafa; }
+#demo-status { font-size: 12px; color: var(--muted); line-height: 1.6; }
+
+/* ── Counters with SVG rings ── */
+.counters { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.counter {
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  padding: 16px 12px 14px; box-shadow: var(--shadow);
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+}
+.counter-ring { width: 70px; height: 70px; position: relative; margin-bottom: 10px; }
+.counter-ring svg { transform: rotate(-90deg); display: block; }
+.ring-bg  { fill: none; stroke: #e5e7eb; stroke-width: 5; }
+.ring-val {
+  fill: none; stroke-width: 5; stroke-linecap: round;
+  stroke-dasharray: 188; stroke-dashoffset: 188;
+  transition: stroke-dashoffset 0.9s cubic-bezier(0.4,0,0.2,1);
+}
+.c-num {
+  position: absolute; inset: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 19px; font-weight: 700; line-height: 1;
+}
+.c-allow .ring-val { stroke: var(--allow); }
+.c-allow .c-num    { color: var(--allow); }
+.c-block .ring-val { stroke: var(--block); }
+.c-block .c-num    { color: var(--block); }
+.c-honey .ring-val { stroke: var(--honeypot); }
+.c-honey .c-num    { color: var(--honeypot); }
+.c-deprio .ring-val { stroke: var(--deprio); }
+.c-deprio .c-num   { color: var(--deprio); }
+.c-label    { font-size: 12px; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.c-sublabel { font-size: 11px; color: var(--light); margin-top: 2px; }
+.c-pct      { font-size: 11px; color: var(--muted); margin-top: 5px; }
 
 /* ── Charts ── */
 .chart-wrap { position: relative; height: 200px; }
 
-/* ── Outcome pill ── */
+/* ── Outcome pills ── */
 .outcome-pill {
-  display: inline-block; padding: 3px 10px; border-radius: 20px;
+  display: inline-block; padding: 3px 9px; border-radius: 20px;
   font-size: 11px; font-weight: 600; letter-spacing: 0.3px;
   text-transform: uppercase; white-space: nowrap;
 }
@@ -82,16 +197,21 @@ select:focus { border-color: var(--accent); }
 .op-honeypot     { background: #ffedd5; color: var(--honeypot); }
 .op-deprioritise { background: #fef3c7; color: var(--deprio); }
 
-/* ── Phase badge ── */
 .ph-tag {
   display: inline-block; padding: 2px 6px; border-radius: 4px;
-  font-size: 10px; font-weight: 700; margin-right: 5px; white-space: nowrap;
+  font-size: 10px; font-weight: 700; margin-right: 4px; white-space: nowrap;
 }
 .ph-1 { background: #ede9fe; color: var(--p1); }
 .ph-2 { background: #d1fae5; color: var(--p2); }
 .ph-3 { background: #fce7f3; color: var(--p3); }
 
-/* ── Unblock button ── */
+/* Row slide-in animation */
+@keyframes row-in {
+  from { opacity: 0; transform: translateY(-6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.row-new { animation: row-in 0.3s ease; }
+
 .btn-unblock {
   background: #fee2e2; border: none; color: var(--block);
   font-family: inherit; font-size: 11px; font-weight: 500;
@@ -100,131 +220,191 @@ select:focus { border-color: var(--accent); }
 .btn-unblock:hover { background: var(--block); color: #fff; }
 
 .empty td { color: var(--light); text-align: center; padding: 20px 10px; font-style: italic; }
-#last-updated { color: var(--light); font-size: 12px; position: absolute; right: 28px; top: 18px; }
 {% endblock %}
 
 {% block body %}
-<span id="last-updated" style="position:fixed; top:18px; right:28px; z-index:101; font-size:12px; color:var(--light);">connecting...</span>
-
 <div class="page">
 
-  <!-- Status + algorithm -->
+  <!-- ══ SYSTEM HEALTH ═══════════════════════════════════════════════ -->
   <div class="card">
-    <div class="status-bar">
-      <div class="s-item">
-        <span class="s-dot" id="dot-idms"></span>
-        <label>IDMS</label>
-        <span class="s-val" id="s-idms">--</span>
+    <div class="health-strip">
+
+      <div class="health-seg">
+        <div class="h-dot" id="dot-idms"></div>
+        <div>
+          <div class="h-label">IDMS Proxy</div>
+          <div class="h-val" id="s-idms">--</div>
+        </div>
       </div>
-      <div class="s-item">
-        <span class="s-dot" id="dot-lb"></span>
-        <label>Load Balancer</label>
-        <span class="s-val" id="s-lb">--</span>
+
+      <div class="health-seg">
+        <div class="h-dot" id="dot-lb"></div>
+        <div>
+          <div class="h-label">Load Balancer</div>
+          <div class="h-val" id="s-lb">--</div>
+        </div>
       </div>
-      <div class="s-item">
-        <label>Servers online</label>
-        <span class="s-val" id="s-servers">--</span>
+
+      <div class="health-seg">
+        <div>
+          <div class="h-label">Backend Servers</div>
+          <div class="srv-mini-row">
+            <div class="srv-mini" id="sm0">1</div>
+            <div class="srv-mini" id="sm1">2</div>
+            <div class="srv-mini" id="sm2">3</div>
+            <div class="srv-mini" id="sm3">4</div>
+          </div>
+        </div>
       </div>
-      <div class="s-item" style="margin-left: auto; gap: 8px;">
-        <label>Algorithm</label>
-        <select id="algo-select" onchange="setAlgorithm(this.value)">
-          <option value="round_robin">Round Robin</option>
-          <option value="source_hashing">Source Hashing</option>
-          <option value="least_loaded">Least Loaded</option>
-        </select>
+
+      <div class="health-seg">
+        <div>
+          <div class="h-label">Algorithm</div>
+          <select id="algo-select" onchange="setAlgorithm(this.value)" style="margin-top:4px;">
+            <option value="round_robin">Round Robin</option>
+            <option value="source_hashing">Source Hashing</option>
+            <option value="least_loaded">Least Loaded</option>
+          </select>
+        </div>
       </div>
+
+      <div class="health-seg">
+        <div class="threat-wrap">
+          <div class="threat-badge tb-idle" id="threat-badge">ALL CLEAR</div>
+          <div id="last-updated">connecting...</div>
+        </div>
+      </div>
+
     </div>
   </div>
 
-  <!-- What is this -->
-  <div class="highlight-box">
-    <b>Two-Stage Inline Intrusion Detection for Load-Balanced Systems.</b>
-    Every request passes through the IDMS proxy before reaching the load balancer.
-    <b>Stage 1 (Rule Engine)</b> checks authentication, SQL/NoSQL injection patterns, and rate limits &mdash; instant, deterministic decisions.
-    <b>Stage 2 (Anomaly Engine)</b> scores each request against a per-IP statistical baseline using a modified Z-score (Iglewicz &amp; Hoaglin, 1993) &mdash; catches accelerating attack patterns that evade static thresholds.
-    Use the buttons below to trigger attacks and watch both stages respond in real time.
-  </div>
+  <!-- ══ SCENARIOS (left) + COUNTERS (right) ════════════════════════ -->
+  <div class="row-asym" style="align-items:start;">
 
-  <!-- Demo control panel -->
-  <div class="card">
-    <div class="card-title">Live Demo Control</div>
-    <div class="demo-panel">
-      <div class="demo-row">
-        <div class="demo-label">
-          <div class="phase-pill pill-p1">Phase 1</div>
-          <div class="dl-name">Rule Engine</div>
-          <div class="dl-desc">Instant pattern checks on every request</div>
-        </div>
-        <div class="demo-buttons">
-          <button class="btn btn-p1" onclick="demo('wrong_key')">Wrong API Key</button>
-          <button class="btn btn-p1" onclick="demo('sqli')">SQL Injection</button>
-          <button class="btn btn-p1" onclick="demo('flood')">Rate Flood (250 req)</button>
-          <span class="btn-hint">Each fires immediately — watch the events table below</span>
-        </div>
-      </div>
-      <div class="demo-row">
-        <div class="demo-label">
-          <div class="phase-pill pill-p2">Phase 2</div>
-          <div class="dl-name">Anomaly Engine</div>
-          <div class="dl-desc">Learns normal traffic, flags sudden deviations</div>
-        </div>
-        <div class="demo-buttons">
-          <button class="btn btn-p2" onclick="demo('burst')">Trigger Burst Attack</button>
-          <span class="btn-hint">Baseline runs automatically in the background from system start — click when ready</span>
-        </div>
-      </div>
-      <div style="display:flex; gap:12px; align-items:center;">
-        <button class="btn btn-reset" onclick="demo('reset')">Reset — Unblock All Demo IPs</button>
-        <span class="btn-hint">Use between scenarios to start fresh</span>
-      </div>
-      <div id="demo-status">Ready — click any button above to begin.</div>
-    </div>
-  </div>
-
-  <!-- Traffic counters -->
-  <div class="counters">
-    <div class="counter c-allow">
-      <div class="c-label">Allowed</div>
-      <div class="c-sublabel">clean requests forwarded</div>
-      <div class="c-value" id="cnt-allow">0</div>
-      <div class="c-pct" id="pct-allow">--</div>
-    </div>
-    <div class="counter c-block">
-      <div class="c-label">Blocked</div>
-      <div class="c-sublabel">returned 403 to attacker</div>
-      <div class="c-value" id="cnt-block">0</div>
-      <div class="c-pct" id="pct-block">--</div>
-    </div>
-    <div class="counter c-honey">
-      <div class="c-label">Honeypot</div>
-      <div class="c-sublabel">injection caught &amp; redirected</div>
-      <div class="c-value" id="cnt-honeypot">0</div>
-      <div class="c-pct" id="pct-honeypot">--</div>
-    </div>
-    <div class="counter c-deprio">
-      <div class="c-label">Flagged</div>
-      <div class="c-sublabel">suspicious, forwarded &amp; marked</div>
-      <div class="c-value" id="cnt-deprioritise">0</div>
-      <div class="c-pct" id="pct-deprioritise">--</div>
-    </div>
-  </div>
-
-  <!-- Charts -->
-  <div class="row-2">
+    <!-- Scenario table -->
     <div class="card">
-      <div class="card-title">Requests — last 60 seconds</div>
-      <div class="chart-wrap"><canvas id="chart-rps"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Total requests per server</div>
-      <div class="chart-wrap"><canvas id="chart-servers"></canvas></div>
-    </div>
-  </div>
+      <div class="card-title" style="margin-bottom:14px;">Attack Scenarios</div>
+      <table class="scenario-table">
+        <thead>
+          <tr>
+            <th style="width:52px">Stage</th>
+            <th style="width:140px">Scenario</th>
+            <th>What it does</th>
+            <th style="width:140px">Expected outcome</th>
+            <th style="width:70px"></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr id="row-wrong_key">
+            <td><span class="sc-phase-tag p1">P1</span></td>
+            <td class="sc-name">Wrong API Key</td>
+            <td class="sc-desc-cell">Invalid API key probe &mdash; most common first attempt against a protected API</td>
+            <td class="sc-outcome-cell">403 block</td>
+            <td><button class="sc-btn" onclick="fireScenario('wrong_key', this)">Run</button></td>
+          </tr>
+          <tr id="row-sqli">
+            <td><span class="sc-phase-tag p1">P1</span></td>
+            <td class="sc-name">SQL Injection</td>
+            <td class="sc-desc-cell">SQL payload in request body &mdash; attempts to dump the database or bypass auth</td>
+            <td class="sc-outcome-cell">Honeypot redirect</td>
+            <td><button class="sc-btn" onclick="fireScenario('sqli', this)">Run</button></td>
+          </tr>
+          <tr id="row-flood">
+            <td><span class="sc-phase-tag p1">P1</span></td>
+            <td class="sc-name">Rate Flood</td>
+            <td class="sc-desc-cell">250 requests in ~2.5 s &mdash; exceeds 200 req&thinsp;/&thinsp;10 s ceiling, triggers a 5-min block</td>
+            <td class="sc-outcome-cell">Block after 200 req</td>
+            <td><button class="sc-btn" onclick="fireScenario('flood', this)">Run</button></td>
+          </tr>
+          <tr id="row-burst">
+            <td><span class="sc-phase-tag p2">P2</span></td>
+            <td class="sc-name">Burst Attack</td>
+            <td class="sc-desc-cell">50 concurrent requests &mdash; collapses inter-arrival time from ~100 ms baseline to &lt;1 ms</td>
+            <td class="sc-outcome-cell">Flagged / deprioritised</td>
+            <td><button class="sc-btn" onclick="fireScenario('burst', this)">Run</button></td>
+          </tr>
+        </tbody>
+      </table>
 
-  <!-- Events + Blocked IPs -->
+      <!-- Reset + warmup row -->
+      <div style="display:flex; align-items:center; gap:14px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">
+        <button class="sc-reset-btn" onclick="fireScenario('reset', this)">Reset &mdash; unblock all demo IPs</button>
+        <div style="flex:1"></div>
+        <div class="warmup-strip" id="warmup-strip" style="margin-top:0; flex:1; max-width:340px;">
+          <div class="wu-dot warming" id="wu-dot"></div>
+          <span class="wu-label" id="wu-label">Baseline warming up</span>
+          <span class="wu-detail" id="wu-detail">0 / 150 samples</span>
+          <div class="wu-bar-wrap"><div class="wu-bar" id="wu-bar" style="width:0%"></div></div>
+        </div>
+      </div>
+
+      <!-- Status output -->
+      <div class="demo-status-box" id="demo-status-box">
+        <div id="demo-status">Ready &mdash; select a scenario above to begin.</div>
+      </div>
+    </div>
+
+    <!-- Counters 2×2 -->
+    <div class="card" style="height:100%;">
+      <div class="card-title" style="margin-bottom:14px;">Traffic counters</div>
+      <div class="counters">
+        <div class="counter c-allow">
+          <div class="counter-ring">
+            <svg width="70" height="70" viewBox="0 0 70 70">
+              <circle class="ring-bg"  cx="35" cy="35" r="30"/>
+              <circle class="ring-val" id="ring-allow" cx="35" cy="35" r="30"/>
+            </svg>
+            <div class="c-num" id="cnt-allow">0</div>
+          </div>
+          <div class="c-label">Allowed</div>
+          <div class="c-sublabel">forwarded to servers</div>
+          <div class="c-pct" id="pct-allow">&mdash;</div>
+        </div>
+        <div class="counter c-block">
+          <div class="counter-ring">
+            <svg width="70" height="70" viewBox="0 0 70 70">
+              <circle class="ring-bg"  cx="35" cy="35" r="30"/>
+              <circle class="ring-val" id="ring-block" cx="35" cy="35" r="30"/>
+            </svg>
+            <div class="c-num" id="cnt-block">0</div>
+          </div>
+          <div class="c-label">Blocked</div>
+          <div class="c-sublabel">returned 403</div>
+          <div class="c-pct" id="pct-block">&mdash;</div>
+        </div>
+        <div class="counter c-honey">
+          <div class="counter-ring">
+            <svg width="70" height="70" viewBox="0 0 70 70">
+              <circle class="ring-bg"  cx="35" cy="35" r="30"/>
+              <circle class="ring-val" id="ring-honeypot" cx="35" cy="35" r="30"/>
+            </svg>
+            <div class="c-num" id="cnt-honeypot">0</div>
+          </div>
+          <div class="c-label">Honeypot</div>
+          <div class="c-sublabel">injection redirected</div>
+          <div class="c-pct" id="pct-honeypot">&mdash;</div>
+        </div>
+        <div class="counter c-deprio">
+          <div class="counter-ring">
+            <svg width="70" height="70" viewBox="0 0 70 70">
+              <circle class="ring-bg"  cx="35" cy="35" r="30"/>
+              <circle class="ring-val" id="ring-deprioritise" cx="35" cy="35" r="30"/>
+            </svg>
+            <div class="c-num" id="cnt-deprioritise">0</div>
+          </div>
+          <div class="c-label">Flagged</div>
+          <div class="c-sublabel">suspicious, forwarded</div>
+          <div class="c-pct" id="pct-deprioritise">&mdash;</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- end scenarios + counters -->
+
+  <!-- ══ DETECTION LOG + BLOCKED ════════════════════════════════════ -->
   <div class="row-asym">
     <div class="card">
-      <div class="card-title" style="margin-bottom:10px">Detections — blocked · honeypot · flagged</div>
+      <div class="card-title" style="margin-bottom:10px;">Detections &mdash; blocked &middot; honeypot &middot; flagged</div>
       <div style="overflow-y:auto; max-height:220px; margin-bottom:18px;">
         <table>
           <thead><tr><th>Time</th><th>From IP</th><th>Result</th><th>Detection</th><th>What happened</th></tr></thead>
@@ -233,7 +413,7 @@ select:focus { border-color: var(--accent); }
           </tbody>
         </table>
       </div>
-      <div class="card-title" style="margin-bottom:10px; color:#16a34a">Allowed traffic</div>
+      <div class="card-title" style="margin-bottom:10px; color:#16a34a;">Allowed traffic</div>
       <div style="overflow-y:auto; max-height:160px;">
         <table>
           <thead><tr><th>Time</th><th>From IP</th><th>Result</th><th>What happened</th></tr></thead>
@@ -254,204 +434,352 @@ select:focus { border-color: var(--accent); }
     </div>
   </div>
 
+  <!-- ══ CHARTS ══════════════════════════════════════════════════════ -->
+  <div class="row-2">
+    <div class="card">
+      <div class="card-title">Requests &mdash; last 60 seconds</div>
+      <div class="chart-wrap"><canvas id="chart-rps"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Total requests per server</div>
+      <div class="chart-wrap"><canvas id="chart-servers"></canvas></div>
+    </div>
+  </div>
+
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <script>
-  const RULE_INFO = {
-    'missing_api_key':   [1, 'Missing API Key',    'No API key was sent — request rejected immediately'],
-    'malformed_api_key': [1, 'Malformed API Key',   'API key was present but badly formed'],
-    'invalid_api_key':   [1, 'Wrong API Key',       'API key did not match — access denied'],
-    'sqli':              [1, 'SQL/NoSQL Injection',  'Attack pattern found in the request body — sent to honeypot instead of real server'],
-    'rate_limit':        [1, 'Rate Flood',           'More than 200 requests in 10 seconds from this IP — blocked for 5 minutes'],
-    'endpoint_scan':     [1, 'Endpoint Scan',        'Rapidly probing many different paths — likely reconnaissance'],
-    'oversized_payload': [1, 'Oversized Payload',    'Request body over 8 KB — blocked to prevent memory attacks'],
-    'oversized_list':    [1, 'Oversized List',       'Sent an extremely long list — blocked'],
-    'anomaly':           [2, 'Burst Anomaly',         'Requests arriving much faster than the learned baseline for this IP'],
-    'ip_blocked':        [3, 'IP Blocked',            'This IP is in an active block period — all requests rejected'],
-    'escalation':        [3, 'Escalation Block',      'Too many suspicious events — automatically upgraded to a full block'],
+// ═══════════════════════════════════════════════════════════════
+// RULE INFO
+// ═══════════════════════════════════════════════════════════════
+const RULE_INFO = {
+  'missing_api_key':   [1, 'Missing API Key',    'No API key was sent — request rejected immediately'],
+  'malformed_api_key': [1, 'Malformed API Key',   'API key was present but badly formed'],
+  'invalid_api_key':   [1, 'Wrong API Key',       'API key did not match — access denied'],
+  'sqli':              [1, 'SQL/NoSQL Injection',  'Attack pattern found in the request body — sent to honeypot'],
+  'rate_limit':        [1, 'Rate Flood',           'More than 200 requests in 10 seconds from this IP — blocked for 5 minutes'],
+  'endpoint_scan':     [1, 'Endpoint Scan',        'Rapidly probing many different paths — likely reconnaissance'],
+  'oversized_payload': [1, 'Oversized Payload',    'Request body over 8 KB — blocked to prevent memory attacks'],
+  'oversized_list':    [1, 'Oversized List',       'Sent an extremely long list — blocked'],
+  'anomaly':           [2, 'Burst Anomaly',         'Requests arriving much faster than the learned baseline for this IP'],
+  'ip_blocked':        [3, 'IP Blocked',            'This IP is in an active block period — all requests rejected'],
+  'escalation':        [3, 'Escalation Block',      'Too many suspicious events — automatically upgraded to a full block'],
+};
+
+// ═══════════════════════════════════════════════════════════════
+// CHARTS
+// ═══════════════════════════════════════════════════════════════
+Chart.defaults.color = '#9ca3af';
+Chart.defaults.borderColor = '#f0f2f5';
+Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+Chart.defaults.font.size = 11;
+
+function makeScales(yLabel) {
+  return {
+    x: { grid: { color: '#f0f2f5' }, ticks: { color: '#9ca3af', maxRotation: 0 } },
+    y: { grid: { color: '#f0f2f5' }, ticks: { color: '#9ca3af' }, beginAtZero: true,
+      title: yLabel ? { display: true, text: yLabel, color: '#9ca3af', font: { size: 10 } } : undefined },
+  };
+}
+const BASE = {
+  responsive: true, maintainAspectRatio: false, animation: false,
+  plugins: { legend: { display: false },
+    tooltip: { backgroundColor: '#1a1d23', titleColor: '#9ca3af', bodyColor: '#f4f6f9', borderColor: '#e2e6ea', borderWidth: 1 } },
+};
+
+const rpsChart = new Chart(document.getElementById('chart-rps'), {
+  type: 'line',
+  data: { labels: [], datasets: [{ data: [], borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.07)', borderWidth: 2, pointRadius: 0, fill: true, tension: 0.35 }] },
+  options: { ...BASE, scales: makeScales('requests') },
+});
+
+const serverChart = new Chart(document.getElementById('chart-servers'), {
+  type: 'bar',
+  data: { labels: ['server1','server2','server3','server4'],
+    datasets: [{ data: [0,0,0,0], backgroundColor: ['#16a34a','#2563eb','#ea580c','#d97706'], borderWidth: 0, borderRadius: 4 }] },
+  options: { ...BASE, scales: makeScales('requests') },
+});
+
+// ═══════════════════════════════════════════════════════════════
+// HELPERS
+// ═══════════════════════════════════════════════════════════════
+function fmtTime(ts) { return new Date(ts * 1000).toTimeString().slice(0, 8); }
+
+function fmtExpiry(unblock_at) {
+  if (!unblock_at) return '\u2014';
+  const secs = Math.round(unblock_at - Date.now() / 1000);
+  if (secs <= 0) return 'expired';
+  const m = Math.floor(secs / 60), s = secs % 60;
+  return m > 0 ? `${m}m ${s}s` : `${s}s`;
+}
+
+function outcomePill(outcome) {
+  const labels = { allow: 'Allowed', block: 'Blocked', honeypot: 'Honeypot', deprioritise: 'Flagged' };
+  return `<span class="outcome-pill op-${outcome}">${labels[outcome] || outcome}</span>`;
+}
+
+function detectionCell(rule_name) {
+  if (!rule_name) return '<span style="color:#9ca3af">\u2014</span>';
+  const info = RULE_INFO[rule_name];
+  if (!info) return `<span>${rule_name}</span>`;
+  const [phase, label] = info;
+  return `<span class="ph-tag ph-${phase}">P${phase}</span><span style="font-weight:500">${label}</span>`;
+}
+
+function whatHappened(rule_name, outcome) {
+  if (!rule_name && outcome === 'allow')
+    return '<span style="color:#9ca3af">Normal request \u2014 forwarded to servers</span>';
+  const info = RULE_INFO[rule_name];
+  if (!info) return '<span style="color:#9ca3af">\u2014</span>';
+  return `<span style="color:#4b5563">${info[2]}</span>`;
+}
+
+// ═══════════════════════════════════════════════════════════════
+// RING PROGRESS
+// ═══════════════════════════════════════════════════════════════
+const CIRCUMFERENCE = 2 * Math.PI * 30; // ≈ 188.5 (r=30)
+
+function updateRing(id, fraction) {
+  const el = document.getElementById('ring-' + id);
+  if (el) el.style.strokeDashoffset = CIRCUMFERENCE * (1 - Math.min(1, Math.max(0, fraction)));
+}
+
+// ═══════════════════════════════════════════════════════════════
+// THREAT BADGE
+// ═══════════════════════════════════════════════════════════════
+function updateThreat(detections) {
+  const badge = document.getElementById('threat-badge');
+  if (detections === 0) {
+    badge.className = 'threat-badge tb-idle'; badge.textContent = 'ALL CLEAR';
+  } else if (detections < 5) {
+    badge.className = 'threat-badge tb-ok'; badge.textContent = 'MONITORING';
+  } else if (detections < 40) {
+    badge.className = 'threat-badge tb-warn'; badge.textContent = 'THREATS DETECTED';
+  } else {
+    badge.className = 'threat-badge tb-alert'; badge.textContent = 'UNDER ATTACK';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REFRESH OVERVIEW
+// ═══════════════════════════════════════════════════════════════
+let _algoChanging = false, _algoTimeout = null;
+
+async function refreshOverview() {
+  let d;
+  try { const r = await fetch('/api/overview'); d = await r.json(); }
+  catch (_) { document.getElementById('last-updated').textContent = 'connection error'; return; }
+
+  // IDMS
+  const idmsDot = document.getElementById('dot-idms'), si = document.getElementById('s-idms');
+  idmsDot.className = d.idms_healthy ? 'h-dot ok' : 'h-dot down';
+  si.textContent = d.idms_healthy ? 'healthy' : 'down';
+  si.className = d.idms_healthy ? 'h-val ok' : 'h-val down';
+
+  // LB
+  const lbDot = document.getElementById('dot-lb'), sl = document.getElementById('s-lb');
+  lbDot.className = d.lb_healthy ? 'h-dot ok' : 'h-dot down';
+  sl.textContent = d.lb_healthy ? 'healthy' : 'down';
+  sl.className = d.lb_healthy ? 'h-val ok' : 'h-val down';
+
+  // Server mini-grid
+  const healthy = d.healthy_servers || 0;
+  for (let i = 0; i < 4; i++) {
+    const sm = document.getElementById('sm' + i);
+    if (sm) sm.className = 'srv-mini ' + (i < healthy ? 'up' : 'down');
+  }
+
+  // Algorithm
+  if (!_algoChanging) document.getElementById('algo-select').value = d.algorithm;
+
+  // Counters + rings
+  const c = d.counters || {};
+  const total = (c.allow||0) + (c.block||0) + (c.honeypot||0) + (c.deprioritise||0);
+  for (const k of ['allow','block','honeypot','deprioritise']) {
+    const v = c[k] || 0;
+    document.getElementById(`cnt-${k}`).textContent = v;
+    document.getElementById(`pct-${k}`).textContent = total > 0 ? ((v/total)*100).toFixed(1)+'% of total' : '\u2014';
+    updateRing(k, total > 0 ? v / total : 0);
+  }
+
+  // Threat badge
+  updateThreat((c.block||0) + (c.honeypot||0) + (c.deprioritise||0));
+
+  // RPS chart
+  const series = d.req_series || [];
+  rpsChart.data.labels = series.map(s => fmtTime(s.t));
+  rpsChart.data.datasets[0].data = series.map(s => s.count);
+  rpsChart.update('none');
+
+  // Server loads chart
+  const loads = d.server_loads || [];
+  serverChart.data.labels = loads.map(s => s.name);
+  serverChart.data.datasets[0].data = loads.map(s => s.total_requests);
+  serverChart.update('none');
+
+  document.getElementById('last-updated').textContent = 'Updated ' + new Date().toTimeString().slice(0, 8);
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REFRESH DETECTIONS
+// ═══════════════════════════════════════════════════════════════
+let _prevDetCount = 0;
+
+async function refreshDetections() {
+  let rows;
+  try { const r = await fetch('/api/detections?limit=50'); rows = await r.json(); } catch (_) { return; }
+  const tbody = document.getElementById('detections-tbody');
+  if (!Array.isArray(rows) || !rows.length) {
+    tbody.innerHTML = '<tr class="empty"><td colspan="5">no detections yet\u2026</td></tr>';
+    _prevDetCount = 0; return;
+  }
+  const newCount = Math.max(0, rows.length - _prevDetCount);
+  _prevDetCount = rows.length;
+  tbody.innerHTML = rows.map((e, i) => `<tr${i < newCount ? ' class="row-new"' : ''}>
+    <td style="color:#9ca3af; white-space:nowrap">${fmtTime(e.ts)}</td>
+    <td style="color:#6b7280; font-family:monospace; font-size:12px">${e.ip || '\u2014'}</td>
+    <td>${outcomePill(e.action)}</td>
+    <td style="white-space:nowrap">${detectionCell(e.rule_name)}</td>
+    <td style="font-size:13px">${whatHappened(e.rule_name, e.action)}</td>
+  </tr>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REFRESH ALLOWED
+// ═══════════════════════════════════════════════════════════════
+async function refreshAllowed() {
+  let events;
+  try { const r = await fetch('/api/events?n=100'); events = await r.json(); } catch (_) { return; }
+  if (!Array.isArray(events)) return;
+  const allowed = events.filter(e => e.outcome === 'allow');
+  const atbody = document.getElementById('allowed-tbody');
+  if (!allowed.length) {
+    atbody.innerHTML = '<tr class="empty"><td colspan="4">no traffic yet\u2026</td></tr>'; return;
+  }
+  atbody.innerHTML = allowed.slice(0, 20).map(e => `<tr>
+    <td style="color:#9ca3af; white-space:nowrap">${fmtTime(e.ts)}</td>
+    <td style="color:#6b7280; font-family:monospace; font-size:12px">${e.ip || '\u2014'}</td>
+    <td>${outcomePill(e.outcome)}</td>
+    <td style="font-size:13px; color:#9ca3af">Normal request \u2014 forwarded to servers</td>
+  </tr>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// REFRESH BLOCKED
+// ═══════════════════════════════════════════════════════════════
+async function refreshBlocked() {
+  let blocked;
+  try { const r = await fetch('/api/blocked'); blocked = await r.json(); } catch (_) { return; }
+  const tbody = document.getElementById('blocked-tbody');
+  if (!Array.isArray(blocked) || !blocked.length) {
+    tbody.innerHTML = '<tr class="empty"><td colspan="4">no IPs blocked</td></tr>'; return;
+  }
+  tbody.innerHTML = blocked.map(b => {
+    const info = RULE_INFO[b.rule_name]; const label = info ? info[1] : (b.rule_name || '\u2014');
+    return `<tr>
+      <td style="font-family:monospace; font-size:12px; color:#dc2626">${b.ip}</td>
+      <td style="font-size:13px">${label}</td>
+      <td style="color:#d97706; font-size:13px">${fmtExpiry(b.unblock_at)}</td>
+      <td><button class="btn-unblock" onclick="unblock('${b.ip}')">Unblock</button></td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════════════════════
+// ACTIONS
+// ═══════════════════════════════════════════════════════════════
+async function setAlgorithm(algo) {
+  _algoChanging = true;
+  try { await fetch('/api/algorithm', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({algorithm:algo}) }); } catch(_) {}
+  if (_algoTimeout) clearTimeout(_algoTimeout);
+  _algoTimeout = setTimeout(() => { _algoChanging = false; _algoTimeout = null; }, 3000);
+}
+
+async function unblock(ip) {
+  try { await fetch('/api/unblock/'+ip, {method:'POST'}); await refreshBlocked(); } catch(_) {}
+}
+
+async function fireScenario(type, btn) {
+  const box      = document.getElementById('demo-status-box');
+  const msg      = document.getElementById('demo-status');
+  const origText = btn ? btn.innerHTML : '';
+  const row      = btn ? btn.closest('tr') : null;
+
+  const sending = {
+    wrong_key: 'Sending request with invalid API key\u2026',
+    sqli:      'Sending SQL injection payload\u2026',
+    flood:     'Launching rate flood \u2014 250 requests over ~2.5 s\u2026',
+    burst:     'Sending burst \u2014 50 concurrent requests\u2026',
+    reset:     'Resetting \u2014 unblocking all demo IPs\u2026',
   };
 
-  Chart.defaults.color = '#9ca3af';
-  Chart.defaults.borderColor = '#f0f2f5';
-  Chart.defaults.font.family = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-  Chart.defaults.font.size = 11;
+  if (btn) { btn.innerHTML = '<span class="sc-spinner"></span>'; btn.disabled = true; }
+  if (row) row.classList.add('firing');
+  box.className = 'demo-status-box st-running';
+  msg.textContent = sending[type] || 'Running\u2026';
 
-  function makeScales(yLabel) {
-    return {
-      x: { grid: { color: '#f0f2f5' }, ticks: { color: '#9ca3af', maxRotation: 0 } },
-      y: { grid: { color: '#f0f2f5' }, ticks: { color: '#9ca3af' }, beginAtZero: true,
-        title: yLabel ? { display: true, text: yLabel, color: '#9ca3af', font: { size: 10 } } : undefined },
-    };
+  try {
+    const r = await fetch('/api/demo', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({type}) });
+    const d = await r.json();
+    box.className = 'demo-status-box st-ok';
+    msg.textContent = d.message || 'Done.';
+  } catch (e) {
+    box.className = 'demo-status-box st-error';
+    msg.textContent = 'Error: ' + e.message;
+  } finally {
+    if (btn) { btn.innerHTML = origText; btn.disabled = false; }
+    if (row) row.classList.remove('firing');
   }
+}
 
-  const BASE = {
-    responsive: true, maintainAspectRatio: false, animation: false,
-    plugins: { legend: { display: false },
-      tooltip: { backgroundColor: '#1a1d23', titleColor: '#9ca3af', bodyColor: '#f4f6f9', borderColor: '#e2e6ea', borderWidth: 1 } },
-  };
+// ═══════════════════════════════════════════════════════════════
+// WARMUP INDICATOR
+// ═══════════════════════════════════════════════════════════════
+const WU_IP = '10.10.0.4';
 
-  const rpsChart = new Chart(document.getElementById('chart-rps'), {
-    type: 'line',
-    data: { labels: [], datasets: [{ data: [], borderColor: '#2563eb', backgroundColor: 'rgba(37,99,235,0.06)', borderWidth: 2, pointRadius: 0, fill: true, tension: 0.3 }] },
-    options: { ...BASE, scales: makeScales('requests') },
-  });
+async function refreshWarmup() {
+  try {
+    const snap   = await (await fetch('/api/anomaly_snapshot')).json();
+    const ip     = snap[WU_IP] || {};
+    const warmed  = ip.warmed_up || false;
+    const samples = ip.samples   || 0;
+    const pct     = Math.min(100, Math.round((samples / 150) * 100));
 
-  const serverChart = new Chart(document.getElementById('chart-servers'), {
-    type: 'bar',
-    data: { labels: ['server1','server2','server3','server4'], datasets: [{ data: [0,0,0,0], backgroundColor: ['#16a34a','#2563eb','#ea580c','#d97706'], borderWidth: 0, borderRadius: 4 }] },
-    options: { ...BASE, scales: makeScales('requests') },
-  });
+    const dot    = document.getElementById('wu-dot');
+    const label  = document.getElementById('wu-label');
+    const detail = document.getElementById('wu-detail');
+    const bar    = document.getElementById('wu-bar');
 
-  function fmtTime(ts) { return new Date(ts * 1000).toTimeString().slice(0, 8); }
-
-  function fmtExpiry(unblock_at) {
-    if (!unblock_at) return '\u2014';
-    const secs = Math.round(unblock_at - Date.now() / 1000);
-    if (secs <= 0) return 'expired';
-    const m = Math.floor(secs / 60), s = secs % 60;
-    return m > 0 ? `${m}m ${s}s` : `${s}s`;
-  }
-
-  function outcomePill(outcome) {
-    const labels = { allow: 'Allowed', block: 'Blocked', honeypot: 'Honeypot', deprioritise: 'Flagged' };
-    return `<span class="outcome-pill op-${outcome}">${labels[outcome] || outcome}</span>`;
-  }
-
-  function detectionCell(rule_name) {
-    if (!rule_name) return '<span style="color:#9ca3af">\u2014</span>';
-    const info = RULE_INFO[rule_name];
-    if (!info) return `<span>${rule_name}</span>`;
-    const [phase, label] = info;
-    return `<span class="ph-tag ph-${phase}">P${phase}</span><span style="font-weight:500">${label}</span>`;
-  }
-
-  function whatHappened(rule_name, outcome) {
-    if (!rule_name && outcome === 'allow') return '<span style="color:#9ca3af">Normal request \u2014 forwarded to servers</span>';
-    const info = RULE_INFO[rule_name];
-    if (!info) return '<span style="color:#9ca3af">\u2014</span>';
-    return `<span style="color:#4b5563">${info[2]}</span>`;
-  }
-
-  let _algoChanging = false;
-  let _algoTimeout  = null;
-
-  async function refreshOverview() {
-    let d;
-    try { const r = await fetch('/api/overview'); d = await r.json(); }
-    catch (_) { document.getElementById('last-updated').textContent = 'connection error'; return; }
-
-    const idmsDot = document.getElementById('dot-idms'), si = document.getElementById('s-idms');
-    idmsDot.className = d.idms_healthy ? 's-dot ok' : 's-dot down';
-    si.textContent = d.idms_healthy ? 'healthy' : 'down';
-    si.className = d.idms_healthy ? 's-val ok' : 's-val down';
-
-    const lbDot = document.getElementById('dot-lb'), sl = document.getElementById('s-lb');
-    lbDot.className = d.lb_healthy ? 's-dot ok' : 's-dot down';
-    sl.textContent = d.lb_healthy ? 'healthy' : 'down';
-    sl.className = d.lb_healthy ? 's-val ok' : 's-val down';
-
-    document.getElementById('s-servers').textContent = `${d.healthy_servers} / 4`;
-    if (!_algoChanging) document.getElementById('algo-select').value = d.algorithm;
-
-    const c = d.counters || {};
-    const total = (c.allow||0) + (c.block||0) + (c.honeypot||0) + (c.deprioritise||0);
-    for (const k of ['allow','block','honeypot','deprioritise']) {
-      const v = c[k] || 0;
-      document.getElementById(`cnt-${k}`).textContent = v;
-      document.getElementById(`pct-${k}`).textContent = total > 0 ? ((v/total)*100).toFixed(1)+'% of total' : '\u2014';
+    if (warmed) {
+      dot.className   = 'wu-dot ready';
+      label.textContent  = 'Anomaly baseline ready';
+      detail.textContent = `${samples} samples \u2014 Phase 2 scoring active`;
+      bar.style.width = '100%';
+      bar.className   = 'wu-bar ready';
+    } else {
+      dot.className   = 'wu-dot warming';
+      label.textContent  = 'Anomaly baseline warming up';
+      detail.textContent = `${samples} / 150 samples`;
+      bar.style.width = pct + '%';
+      bar.className   = 'wu-bar';
     }
+  } catch(_) {}
+}
 
-    const series = d.req_series || [];
-    rpsChart.data.labels = series.map(s => fmtTime(s.t));
-    rpsChart.data.datasets[0].data = series.map(s => s.count);
-    rpsChart.update('none');
-
-    const loads = d.server_loads || [];
-    serverChart.data.labels = loads.map(s => s.name);
-    serverChart.data.datasets[0].data = loads.map(s => s.total_requests);
-    serverChart.update('none');
-
-    document.getElementById('last-updated').textContent = 'Last updated ' + new Date().toTimeString().slice(0, 8);
-  }
-
-  async function refreshDetections() {
-    let rows;
-    try { const r = await fetch('/api/detections?limit=50'); rows = await r.json(); } catch (_) { return; }
-    const tbody = document.getElementById('detections-tbody');
-    if (!Array.isArray(rows) || !rows.length) { tbody.innerHTML = '<tr class="empty"><td colspan="5">no detections yet\u2026</td></tr>'; return; }
-    tbody.innerHTML = rows.map(e => `<tr>
-      <td style="color:#9ca3af; white-space:nowrap">${fmtTime(e.ts)}</td>
-      <td style="color:#6b7280; font-family:monospace; font-size:12px">${e.ip || '\u2014'}</td>
-      <td>${outcomePill(e.action)}</td>
-      <td style="white-space:nowrap">${detectionCell(e.rule_name)}</td>
-      <td style="font-size:13px">${whatHappened(e.rule_name, e.action)}</td>
-    </tr>`).join('');
-  }
-
-  async function refreshAllowed() {
-    let events;
-    try { const r = await fetch('/api/events?n=100'); events = await r.json(); } catch (_) { return; }
-    if (!Array.isArray(events)) return;
-    const allowed = events.filter(e => e.outcome === 'allow');
-    const atbody = document.getElementById('allowed-tbody');
-    if (!allowed.length) { atbody.innerHTML = '<tr class="empty"><td colspan="4">no traffic yet\u2026</td></tr>'; return; }
-    atbody.innerHTML = allowed.slice(0,20).map(e => `<tr>
-      <td style="color:#9ca3af; white-space:nowrap">${fmtTime(e.ts)}</td>
-      <td style="color:#6b7280; font-family:monospace; font-size:12px">${e.ip || '\u2014'}</td>
-      <td>${outcomePill(e.outcome)}</td>
-      <td style="font-size:13px; color:#9ca3af">Normal request \u2014 forwarded to servers</td>
-    </tr>`).join('');
-  }
-
-  async function refreshBlocked() {
-    let blocked;
-    try { const r = await fetch('/api/blocked'); blocked = await r.json(); } catch (_) { return; }
-    const tbody = document.getElementById('blocked-tbody');
-    if (!Array.isArray(blocked) || !blocked.length) { tbody.innerHTML = '<tr class="empty"><td colspan="4">no IPs blocked</td></tr>'; return; }
-    tbody.innerHTML = blocked.map(b => {
-      const info = RULE_INFO[b.rule_name]; const label = info ? info[1] : (b.rule_name || '\u2014');
-      return `<tr>
-        <td style="font-family:monospace; font-size:12px; color:#dc2626">${b.ip}</td>
-        <td style="font-size:13px">${label}</td>
-        <td style="color:#d97706; font-size:13px">${fmtExpiry(b.unblock_at)}</td>
-        <td><button class="btn-unblock" onclick="unblock('${b.ip}')">Unblock</button></td>
-      </tr>`;
-    }).join('');
-  }
-
-  async function setAlgorithm(algo) {
-    _algoChanging = true;
-    try { await fetch('/api/algorithm', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({algorithm:algo}) }); } catch(_) {}
-    if (_algoTimeout) clearTimeout(_algoTimeout);
-    _algoTimeout = setTimeout(() => { _algoChanging = false; _algoTimeout = null; }, 3000);
-  }
-
-  async function unblock(ip) {
-    try { await fetch('/api/unblock/'+ip, {method:'POST'}); await refreshBlocked(); } catch(_) {}
-  }
-
-  async function demo(type) {
-    const statusEl = document.getElementById('demo-status');
-    const sending = { wrong_key:'Sending a request with the wrong API key\u2026', sqli:'Sending a SQL injection payload\u2026',
-      flood:'Launching rate flood \u2014 250 requests over ~2.5 seconds\u2026', burst:'Sending burst \u2014 50 concurrent requests\u2026', reset:'Resetting demo IPs\u2026' };
-    statusEl.textContent = sending[type] || 'Running\u2026';
-    statusEl.style.color = '#2563eb';
-    try {
-      const r = await fetch('/api/demo', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({type}) });
-      const d = await r.json();
-      statusEl.textContent = d.message || 'Done.';
-      statusEl.style.color = '#16a34a';
-    } catch (e) { statusEl.textContent = 'Error: '+e.message; statusEl.style.color = '#dc2626'; }
-  }
-
-  refreshOverview(); refreshDetections(); refreshAllowed(); refreshBlocked();
-  const _intervals = [
-    setInterval(refreshOverview, 2000), setInterval(refreshDetections, 2000),
-    setInterval(refreshAllowed, 2000), setInterval(refreshBlocked, 3000),
-  ];
-  window.addEventListener('beforeunload', () => _intervals.forEach(id => clearInterval(id)));
+// ═══════════════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════════════
+refreshOverview(); refreshDetections(); refreshAllowed(); refreshBlocked(); refreshWarmup();
+const _intervals = [
+  setInterval(refreshOverview,   2000),
+  setInterval(refreshDetections, 2000),
+  setInterval(refreshAllowed,    2000),
+  setInterval(refreshBlocked,    3000),
+  setInterval(refreshWarmup,     3000),
+];
+window.addEventListener('beforeunload', () => _intervals.forEach(id => clearInterval(id)));
 </script>
 {% endblock %}

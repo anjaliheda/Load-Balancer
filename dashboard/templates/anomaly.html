@@ -96,26 +96,6 @@
 .dr-detail { display:none; font-size:12px; color:var(--muted); line-height:1.6; margin-top:8px; padding-top:8px; border-top:1px solid var(--border); }
 .decision-row.open .dr-detail { display: block; }
 
-/* ── Baseline status ── */
-.bs-strip {
-  display: flex; align-items: center; gap: 12px; padding: 14px 18px;
-  border-radius: 8px; border: 1px solid var(--border); background: var(--bg);
-}
-.bs-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
-.bs-dot.warming { background: #f59e0b; animation: pulse 1.5s infinite; }
-.bs-dot.ready   { background: var(--allow); }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
-
-/* ── Z-score panel ── */
-#zscore-live-panel .zsp-grid {
-  display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; margin-top: 10px;
-}
-.zsp-cell {
-  text-align: center; padding: 12px; background: var(--bg);
-  border-radius: 8px; border: 1px solid var(--border);
-}
-.zsp-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
-.zsp-value { font-size: 28px; font-weight: 700; }
 {% endblock %}
 
 {% block body %}
@@ -236,7 +216,7 @@
       </div>
       <div>
         <div style="font-size:13px; font-weight:600; color:var(--text); margin-bottom:8px;">IAT distribution: baseline vs. burst</div>
-        <canvas id="iat-canvas" width="300" height="160" style="border-radius:8px; border:1px solid var(--border); width:100%;"></canvas>
+        <canvas id="iat-canvas" style="border-radius:8px; border:1px solid var(--border); width:100%; height:160px; display:block;"></canvas>
         <div class="iat-legend">
           <span><span class="iat-legend-dot" style="background:#93c5fd"></span>Baseline IAT (~100ms)</span>
           <span><span class="iat-legend-dot" style="background:#fca5a5"></span>Burst IAT (~1ms) &mdash; Z&nbsp;&gt;&nbsp;1.5</span>
@@ -281,36 +261,6 @@
     </div>
   </div>
 
-  <!-- Baseline status -->
-  <div class="card">
-    <div class="card-title">Live baseline status &amp; burst demo</div>
-    <div class="bs-strip" id="baseline-box">
-      <div class="bs-dot warming" id="bs-dot"></div>
-      <div>
-        <div style="font-size:13px; font-weight:600;" id="bs-label">Checking baseline...</div>
-        <div style="font-size:12px; color:var(--muted);" id="bs-detail">Background traffic runs automatically from system start</div>
-      </div>
-    </div>
-    <div style="margin-top:14px; display:flex; gap:12px; align-items:center;">
-      <button class="btn btn-green" onclick="burstDemo()">Trigger Burst Attack</button>
-      <span style="font-size:12px; color:var(--muted);">Sends 50 concurrent requests &mdash; IAT drops from ~100ms to &lt;1ms, watch Z-score spike</span>
-    </div>
-    <div id="anomaly-demo-status" style="margin-top:10px; font-size:13px; color:var(--muted); padding:10px 14px; background:var(--bg); border:1px solid var(--border); border-radius:6px; min-height:36px;">
-      Baseline builds automatically at ~10 req/s. Once 150 samples are collected (~15s), the burst demo triggers real detections.
-    </div>
-  </div>
-
-  <!-- Live Z-score stats -->
-  <div class="card">
-    <div class="card-title">Live Z-score ring buffer &mdash; last 200 scored requests from demo IP (10.10.0.4)</div>
-    <p style="font-size:13px; color:var(--muted); margin-bottom:4px;">
-      After a burst attack, max Z-score spikes above 1.5 and above-threshold count increases.
-      After the slow-rate experiment, mean&nbsp;=&nbsp;0.304, max&nbsp;=&nbsp;1.171 &mdash; demonstrating baseline contamination in real measurements.
-    </p>
-    <div id="zscore-live-panel">
-      <p style="font-size:13px; color:var(--muted); margin-top:10px;">Waiting for data...</p>
-    </div>
-  </div>
 
 </div>
 {% endblock %}
@@ -351,10 +301,20 @@ function explain(key) {
 }
 
 // ── IAT distribution chart ─────────────────────────────────────────────────
-(function() {
+(function drawIAT() {
+  if (!document.getElementById('iat-canvas').offsetWidth) {
+    return requestAnimationFrame(drawIAT);
+  }
   const cv  = document.getElementById('iat-canvas');
   const ctx = cv.getContext('2d');
-  const W = cv.width, H = cv.height;
+  const dpr = window.devicePixelRatio || 1;
+  const W = cv.clientWidth  || cv.offsetWidth  || 300;
+  const H = cv.clientHeight || cv.offsetHeight || 160;
+  cv.width  = Math.round(W * dpr);
+  cv.height = Math.round(H * dpr);
+  cv.style.width  = W + 'px';
+  cv.style.height = H + 'px';
+  ctx.scale(dpr, dpr);
 
   // Baseline: normally distributed around 100ms
   const baseline = [];
@@ -408,74 +368,5 @@ function explain(key) {
   ctx.textAlign = 'right'; ctx.fillText('IAT (ms) →', W - 4, H - 5);
 })();
 
-// ── Baseline status polling ────────────────────────────────────────────────
-const ANOMALY_DEMO_IP = '10.10.0.4';
-
-async function checkBaseline() {
-  const dot    = document.getElementById('bs-dot');
-  const label  = document.getElementById('bs-label');
-  const detail = document.getElementById('bs-detail');
-  try {
-    const snap   = await (await fetch('/api/anomaly_snapshot')).json();
-    const ipData = snap[ANOMALY_DEMO_IP] || {};
-    const warmed = ipData.warmed_up  || false;
-    const samples= ipData.samples    || 0;
-    const zstats = ipData.zscore_stats || {};
-
-    if (warmed) {
-      dot.className = 'bs-dot ready';
-      label.textContent = 'Baseline ready \u2014 anomaly scoring active';
-      detail.textContent = `${samples} samples in current window`;
-    } else {
-      dot.className = 'bs-dot warming';
-      label.textContent = `Warming up \u2014 ${samples} / 150 samples`;
-      detail.textContent = 'Background traffic builds the baseline automatically';
-    }
-
-    const panel = document.getElementById('zscore-live-panel');
-    if (zstats.observations > 0) {
-      const meanColor = zstats.iat_z_mean  > 1.5 ? 'var(--block)' : 'var(--allow)';
-      const maxColor  = zstats.iat_z_max   > 1.5 ? 'var(--block)' : 'var(--text)';
-      const abvColor  = zstats.iat_z_above_threshold > 0 ? 'var(--block)' : 'var(--allow)';
-      panel.innerHTML = `
-        <div class="zsp-grid">
-          <div class="zsp-cell">
-            <div class="zsp-label">Z-score mean</div>
-            <div class="zsp-value" style="color:${meanColor}">${zstats.iat_z_mean.toFixed(3)}</div>
-          </div>
-          <div class="zsp-cell">
-            <div class="zsp-label">Z-score max</div>
-            <div class="zsp-value" style="color:${maxColor}">${zstats.iat_z_max.toFixed(3)}</div>
-          </div>
-          <div class="zsp-cell">
-            <div class="zsp-label">Above threshold</div>
-            <div class="zsp-value" style="color:${abvColor}">${zstats.iat_z_above_threshold}</div>
-          </div>
-        </div>
-        <div style="margin-top:10px; font-size:12px; color:var(--muted); padding:8px 12px; background:var(--bg); border-radius:6px; border:1px solid var(--border);">
-          Baseline at scoring time &mdash; median: <b>${zstats.baseline_median_ms} ms</b> &nbsp; MAD: <b>${zstats.baseline_mad_ms} ms</b>
-          &nbsp;|&nbsp; threshold: <b>${zstats.threshold}</b> &nbsp;|&nbsp; observations: <b>${zstats.observations}</b>
-        </div>`;
-    } else if (warmed) {
-      panel.innerHTML = '<p style="font-size:13px;color:var(--muted);margin-top:10px;">No scored requests yet &mdash; trigger a burst to see Z-score data.</p>';
-    } else {
-      panel.innerHTML = '<p style="font-size:13px;color:var(--muted);margin-top:10px;">Waiting for warmup to complete.</p>';
-    }
-  } catch(e) { label.textContent = 'Cannot reach IDMS'; }
-}
-checkBaseline();
-const _bsInt = setInterval(checkBaseline, 3000);
-window.addEventListener('beforeunload', () => clearInterval(_bsInt));
-
-// ── Burst demo ─────────────────────────────────────────────────────────────
-async function burstDemo() {
-  const el = document.getElementById('anomaly-demo-status');
-  el.textContent = 'Sending 50 concurrent burst requests\u2026'; el.style.color = '#2563eb';
-  try {
-    const r = await fetch('/api/demo', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({type:'burst'}) });
-    const d = await r.json();
-    el.textContent = d.message || 'Done.'; el.style.color = '#16a34a';
-  } catch(e) { el.textContent = 'Error: ' + e.message; el.style.color = '#dc2626'; }
-}
 </script>
 {% endblock %}

@@ -32,5 +32,8 @@ Client/results/
 tp.txt
 *.log
 
+# Personal notes
+existing.md
+
 # Node
 node_modules/

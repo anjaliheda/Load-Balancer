@@ -3,9 +3,21 @@
 
 {% block extra_css %}
 
+/* ── Split layout ── */
+.lb-split {
+  display: grid; grid-template-columns: 3fr 2fr; gap: 0;
+}
+.lb-scene-col {
+  padding: 20px; border-right: 1px solid var(--border);
+  display: flex; flex-direction: column;
+}
+.lb-algo-col {
+  padding: 20px;
+}
+
 /* ── Scene wrapper ── */
 .scene-wrapper {
-  position: relative; width: 100%; height: 300px; overflow: visible;
+  position: relative; width: 100%; height: 260px; overflow: visible;
   user-select: none;
 }
 .scene-svg {
@@ -17,167 +29,84 @@
 .char {
   position: absolute;
   display: flex; flex-direction: column; align-items: center;
-  cursor: pointer; z-index: 10;
+  z-index: 10;
 }
 .char-box {
-  width: 64px; height: 64px; border-radius: 18px;
+  width: 58px; height: 58px; border-radius: 16px;
   display: flex; align-items: center; justify-content: center;
-  font-size: 26px; border: 3px solid;
-  transition: transform 0.18s cubic-bezier(.34,1.56,.64,1), box-shadow 0.18s;
-  position: relative;
+  font-size: 13px; font-weight: 800; letter-spacing: -0.5px; border: 3px solid;
 }
-.char-box:hover { transform: scale(1.12) translateY(-4px); box-shadow: 0 10px 28px rgba(0,0,0,0.18); }
-.char-box.popped { animation: char-bounce 0.5s cubic-bezier(.34,1.56,.64,1); }
-@keyframes char-bounce { 0%,100%{transform:scale(1)} 40%{transform:scale(1.22) translateY(-5px)} }
-
-/* Dashed ring hint */
-.char-box::after {
-  content: ''; position: absolute; inset: -7px; border-radius: 24px;
-  border: 2px dashed; opacity: 0.25;
-  animation: ring-spin 10s linear infinite;
-}
-@keyframes ring-spin { from{transform:rotate(0)} to{transform:rotate(360deg)} }
-
-.char-name { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 7px; }
+.char-name { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 6px; }
 .char-role { font-size: 10px; color: var(--muted); margin-top: 1px; font-style: italic; }
+.char-sm .char-box { width: 44px; height: 44px; font-size: 12px; border-radius: 12px; }
 
-/* Smaller server boxes */
-.char-sm .char-box { width: 50px; height: 50px; font-size: 20px; border-radius: 14px; }
-.char-sm .char-box::after { inset: -6px; border-radius: 19px; }
-
-/* ── Speech bubbles ── */
-.speech-bubble {
-  position: absolute;
-  background: #fff; border-radius: 14px;
-  padding: 14px 36px 14px 16px;
-  font-size: 12px; line-height: 1.65;
-  width: 230px; z-index: 300;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.18);
-  border: 2px solid #e5e7eb;
-  display: none;
-  bottom: calc(100% + 18px); left: 50%; transform: translateX(-50%);
-}
-.speech-bubble.show {
-  display: block;
-  animation: bub-pop 0.28s cubic-bezier(.34,1.56,.64,1);
-}
-@keyframes bub-pop {
-  from { opacity:0; transform:translateX(-50%) scale(0.75) translateY(10px); }
-  to   { opacity:1; transform:translateX(-50%) scale(1)    translateY(0);    }
-}
-/* tail */
-.speech-bubble::after {
-  content:''; position:absolute; top:100%; left:50%; transform:translateX(-50%);
-  border:10px solid transparent; border-top-color:#fff; border-bottom:none;
-}
-.speech-bubble::before {
-  content:''; position:absolute; top:calc(100% + 2px); left:50%; transform:translateX(-50%);
-  border:10px solid transparent; border-bottom:none;
-}
-/* server bubbles float left */
-.bub-left {
-  left: auto; right: 0; transform: none;
-}
-.bub-left.show { animation: bub-pop-left 0.28s cubic-bezier(.34,1.56,.64,1); }
-@keyframes bub-pop-left {
-  from { opacity:0; right:-10px; transform:scale(0.8); }
-  to   { opacity:1; right:0;     transform:scale(1);   }
-}
-.bub-left::after  { left: auto; right: 20px; transform: none; }
-.bub-left::before { left: auto; right: 20px; transform: none; }
-
-.bubble-close {
-  position: absolute; top: 8px; right: 10px;
-  background: none; border: none; font-size: 15px; color: #9ca3af;
-  cursor: pointer; padding: 0; line-height: 1;
-}
-.bubble-close:hover { color: var(--text); }
-.bubble-title { font-weight: 700; font-size: 13px; margin-bottom: 6px; }
-.bubble-body { color: #374151; }
-
-/* Character colour themes */
 .c-client .char-box  { background: #eff6ff; border-color: #93c5fd; color: #1d4ed8; }
-.c-client .char-box::after { border-color: #3b82f6; }
 .c-client .char-name { color: #1d4ed8; }
-.c-client .speech-bubble { border-color: #93c5fd; }
-.c-client .speech-bubble::before { border-top-color: #93c5fd; }
-
 .c-idms .char-box  { background: #f5f3ff; border-color: #c4b5fd; color: #6d28d9; }
-.c-idms .char-box::after { border-color: #8b5cf6; }
 .c-idms .char-name { color: #6d28d9; }
-.c-idms .speech-bubble { border-color: #c4b5fd; }
-.c-idms .speech-bubble::before { border-top-color: #c4b5fd; }
-
 .c-lb .char-box  { background: #fff7ed; border-color: #fed7aa; color: #c2410c; }
-.c-lb .char-box::after { border-color: #fb923c; }
 .c-lb .char-name { color: #c2410c; }
-.c-lb .speech-bubble { border-color: #fed7aa; }
-.c-lb .speech-bubble::before { border-top-color: #fed7aa; }
-
 .c-srv .char-box  { background: #f0fdf4; border-color: #86efac; color: #15803d; }
-.c-srv .char-box::after { border-color: #4ade80; }
 .c-srv .char-name { color: #15803d; }
-.c-srv .speech-bubble { border-color: #86efac; }
-.c-srv .speech-bubble::before { border-top-color: #86efac; }
 
 /* ── Animated packets ── */
 .req-dot {
-  position: absolute; width: 13px; height: 13px; border-radius: 50%;
+  position: absolute; width: 11px; height: 11px; border-radius: 50%;
   pointer-events: none; z-index: 30;
   transform: translate(-50%, -50%);
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
   transition: left 0.14s ease, top 0.14s ease;
 }
 
-/* ── Sim controls ── */
-.sim-bar {
-  display: flex; align-items: center; gap: 12px; padding: 14px 0 2px;
-  border-top: 1px solid var(--border); margin-top: 10px; flex-wrap: wrap;
-}
-.speed-row { display: flex; gap: 6px; align-items: center; }
-.spd-btn {
-  background: var(--bg); border: 1px solid var(--border);
-  border-radius: 6px; padding: 5px 12px; font-size: 12px;
-  cursor: pointer; font-family: inherit; color: var(--muted); transition: all 0.15s;
-}
-.spd-btn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
-.sim-counters {
-  display: flex; gap: 16px; margin-left: auto; align-items: center; font-size: 13px;
-}
-.sim-count { display: flex; align-items: baseline; gap: 5px; }
-.sc-dot { width: 9px; height: 9px; border-radius: 50%; flex-shrink: 0; }
-.sc-val { font-weight: 700; font-size: 16px; }
-
-/* ── Algorithm tabs ── */
+/* ── Algorithm selector (in scene col) ── */
 .algo-tabs {
-  display: flex; gap: 0; border: 1px solid var(--border); border-radius: 10px;
-  overflow: hidden; margin-bottom: 20px;
+  display: flex; gap: 0; border: 1px solid var(--border); border-radius: 8px;
+  overflow: hidden; margin: 12px 0 10px;
 }
 .algo-tab {
-  flex: 1; padding: 12px 10px; text-align: center; cursor: pointer;
+  flex: 1; padding: 8px 6px; text-align: center; cursor: pointer;
   border-right: 1px solid var(--border);
   background: var(--bg); transition: background 0.15s;
-  font-size: 13px; font-weight: 600; color: var(--muted); user-select: none;
+  font-size: 12px; font-weight: 600; color: var(--muted); user-select: none;
 }
 .algo-tab:last-child { border-right: none; }
 .algo-tab:hover { background: #f0f4ff; color: var(--text); }
 .algo-tab.on { background: var(--accent); color: #fff; border-right-color: var(--accent); }
-.algo-tab .at-emoji { font-size: 18px; display: block; margin-bottom: 3px; }
 
-.algo-panel { display: none; gap: 24px; align-items: flex-start; }
-.algo-panel.show { display: flex; animation: fade-in 0.2s ease; }
+/* ── Sim controls ── */
+.sim-bar {
+  display: flex; align-items: center; gap: 10px; padding: 10px 0 8px;
+  border-top: 1px solid var(--border); flex-wrap: wrap;
+}
+.speed-row { display: flex; gap: 5px; align-items: center; }
+.spd-btn {
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 6px; padding: 4px 10px; font-size: 11px;
+  cursor: pointer; font-family: inherit; color: var(--muted); transition: all 0.15s;
+}
+.spd-btn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.sim-counters {
+  display: flex; gap: 12px; margin-left: auto; align-items: center; font-size: 12px;
+}
+.sim-count { display: flex; align-items: baseline; gap: 4px; }
+.sc-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.sc-val { font-weight: 700; font-size: 15px; }
+
+/* ── Distribution chart ── */
+.dist-wrap {
+  border-top: 1px solid var(--border); padding-top: 10px; margin-top: 2px;
+}
+.dist-label { font-size: 11px; color: var(--muted); margin-bottom: 6px; }
+#cv-dist { display: block; width: 100%; height: 70px; border-radius: 6px; }
+
+/* ── Improvements panel (right col) ── */
+.algo-panel { display: none; flex-direction: column; }
+.algo-panel.show { display: flex; animation: fade-in 0.18s ease; }
 @keyframes fade-in { from{opacity:0} to{opacity:1} }
 
-.algo-chart { flex-shrink:0; width: 130px; }
-.algo-chart canvas { border-radius: 8px; border: 1px solid var(--border); display: block; }
-.chart-caption { font-size: 11px; color: var(--muted); text-align: center; margin-top: 5px; }
-
-.algo-text { flex: 1; }
-.algo-text .at-title { font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-.algo-text .at-desc  { font-size: 13px; color: var(--muted); line-height: 1.7; margin-bottom: 14px; }
+.at-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
 .imp-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--allow); margin-bottom: 8px; }
 
-/* Clickable improvement items */
 .imp-row {
   display: flex; gap: 10px; padding: 9px 12px; margin-bottom: 6px;
   background: var(--bg); border-radius: 8px; border: 1px solid var(--border);
@@ -195,7 +124,7 @@
 }
 .imp-row.open .ir-detail { display: block; }
 
-/* ── Collapsible "Under the hood" ── */
+/* ── Under the Hood ── */
 .hood-header {
   display: flex; align-items: center; gap: 10px;
   cursor: pointer; padding: 6px 0; user-select: none;
@@ -208,11 +137,6 @@
 .hood-body { overflow: hidden; max-height: 0; transition: max-height 0.35s ease, margin-top 0.25s; }
 .hood-body.open { max-height: 500px; margin-top: 16px; }
 
-/* hint */
-.scene-hint {
-  font-size: 12px; color: var(--muted); text-align: center;
-  font-style: italic; margin-bottom: 12px;
-}
 {% endblock %}
 
 {% block body %}
@@ -220,257 +144,177 @@
 
   <div class="page-header">
     <h2>Load Balancer</h2>
-    <p>Distributes requests across 4 backend servers &mdash; <em>click any character to hear their role</em></p>
+    <p>Distributes requests across 4 backend servers. Select an algorithm to switch modes.</p>
   </div>
 
-  <!-- ══ THE SCENE ══════════════════════════════════════════════════════════ -->
-  <div class="card" style="padding-bottom:20px;">
+  <!-- ══ SCENE + ALGORITHM (split) ══════════════════════════════════════════ -->
+  <div class="card" style="padding:0;overflow:hidden;">
+    <div class="lb-split">
 
-    <p class="scene-hint">👇 Click a character to open their speech bubble &mdash; then hit ▶ Start to watch requests flow</p>
+      <!-- LEFT: simulation -->
+      <div class="lb-scene-col">
 
-    <div class="scene-wrapper" id="scene">
-      <svg class="scene-svg" id="scene-svg"></svg>
+        <div id="scene" class="scene-wrapper">
+          <svg class="scene-svg" id="scene-svg"></svg>
 
-      <!-- Client -->
-      <div class="char c-client" id="ch-client" style="left:3%;top:36%;" onclick="openBub('client')">
-        <div class="char-box" id="box-client">💻</div>
-        <div class="char-name">Client</div>
-        <div class="char-role">sends requests</div>
-        <div class="speech-bubble" id="bub-client">
-          <button class="bubble-close" onclick="closeBub(event,'client')">✕</button>
-          <div class="bubble-title">Hi, I'm the Client! 👋</div>
-          <div class="bubble-body">
-            I fire requests at port 5001 — the IDMS proxy. I have no idea which server handles me.
-            I just want my maths done!<br><br>
-            My IP is tracked for rate limiting and anomaly detection. As long as I behave, I sail through.
+          <div class="char c-client" id="ch-client" style="left:3%;top:36%;">
+            <div class="char-box" id="box-client">CLI</div>
+            <div class="char-name">Client</div>
+            <div class="char-role">sends requests</div>
+          </div>
+
+          <div class="char c-idms" id="ch-idms" style="left:27%;top:36%;">
+            <div class="char-box" id="box-idms">IDS</div>
+            <div class="char-name">IDMS Proxy</div>
+            <div class="char-role">security gate</div>
+          </div>
+
+          <div class="char c-lb" id="ch-lb" style="left:51%;top:36%;">
+            <div class="char-box" id="box-lb">LB</div>
+            <div class="char-name">Load Balancer</div>
+            <div class="char-role" id="lb-role">round robin</div>
+          </div>
+
+          <div class="char c-srv char-sm" id="ch-s0" style="right:3%;top:1%;">
+            <div class="char-box" id="box-s0">S1</div>
+            <div class="char-name" style="font-size:9px;">Server 1</div>
+          </div>
+          <div class="char c-srv char-sm" id="ch-s1" style="right:3%;top:27%;">
+            <div class="char-box" id="box-s1">S2</div>
+            <div class="char-name" style="font-size:9px;">Server 2</div>
+          </div>
+          <div class="char c-srv char-sm" id="ch-s2" style="right:3%;top:53%;">
+            <div class="char-box" id="box-s2">S3</div>
+            <div class="char-name" style="font-size:9px;">Server 3</div>
+          </div>
+          <div class="char c-srv char-sm" id="ch-s3" style="right:3%;top:76%;">
+            <div class="char-box" id="box-s3">S4</div>
+            <div class="char-name" style="font-size:9px;">Server 4</div>
+          </div>
+        </div><!-- /scene-wrapper -->
+
+        <!-- Algorithm selector -->
+        <div class="algo-tabs">
+          <div class="algo-tab on"  id="tab-rr" onclick="selectAlgo('round_robin')">Round Robin</div>
+          <div class="algo-tab" id="tab-sh" onclick="selectAlgo('source_hashing')">Source Hashing</div>
+          <div class="algo-tab" id="tab-ll" onclick="selectAlgo('least_loaded')">Least Loaded</div>
+        </div>
+
+        <!-- Sim controls -->
+        <div class="sim-bar">
+          <button class="btn btn-accent" id="btn-sim" onclick="toggleSim()">▶ Start</button>
+          <button class="btn btn-gray" onclick="resetSim()">↺ Reset</button>
+          <div class="speed-row">
+            <span style="font-size:11px;color:var(--muted);">Speed:</span>
+            <button class="spd-btn on"  onclick="setSpd(650,this)">Slow</button>
+            <button class="spd-btn"     onclick="setSpd(300,this)">Normal</button>
+            <button class="spd-btn"     onclick="setSpd(100,this)">Fast</button>
+          </div>
+          <div class="sim-counters">
+            <div class="sim-count"><div class="sc-dot" style="background:#3b82f6"></div><span class="sc-val" id="sc0">0</span></div>
+            <div class="sim-count"><div class="sc-dot" style="background:#22c55e"></div><span class="sc-val" id="sc1">0</span></div>
+            <div class="sim-count"><div class="sc-dot" style="background:#f59e0b"></div><span class="sc-val" id="sc2">0</span></div>
+            <div class="sim-count"><div class="sc-dot" style="background:#ef4444"></div><span class="sc-val" id="sc3">0</span></div>
+            <span style="font-size:11px;color:var(--muted);">total: <b id="sc-total">0</b></span>
           </div>
         </div>
-      </div>
 
-      <!-- IDMS -->
-      <div class="char c-idms" id="ch-idms" style="left:27%;top:36%;" onclick="openBub('idms')">
-        <div class="char-box" id="box-idms">🛡️</div>
-        <div class="char-name">IDMS Proxy</div>
-        <div class="char-role">security gate</div>
-        <div class="speech-bubble" id="bub-idms">
-          <button class="bubble-close" onclick="closeBub(event,'idms')">✕</button>
-          <div class="bubble-title">I'm the IDMS Guard! 🛡️</div>
-          <div class="bubble-body">
-            Every single request hits me first. I check your API key, scan for SQL injection, watch your rate...
-            Pass all my checks and I'll forward you to the Load Balancer.<br><br>
-            Try anything sneaky and I'll redirect you to the 🍯 honeypot — you'll get a fake success while I log everything.
+        <!-- Distribution chart -->
+        <div class="dist-wrap">
+          <div class="dist-label">Request distribution</div>
+          <canvas id="cv-dist" height="70"></canvas>
+        </div>
+
+      </div><!-- /lb-scene-col -->
+
+      <!-- RIGHT: improvements for selected algorithm -->
+      <div class="lb-algo-col">
+        <div class="card-title" style="margin-bottom:16px;">What we improved</div>
+
+        <!-- Round Robin -->
+        <div class="algo-panel show" id="panel-rr">
+          <div class="at-title">Round Robin</div>
+          <div class="imp-label">Our improvements</div>
+          <div class="imp-row" onclick="this.classList.toggle('open')">
+            <span class="arrow">▶</span>
+            <div>
+              <div class="ir-main">Background health checks — unhealthy servers auto-skipped</div>
+              <div class="ir-detail">Instead of pinging every server on every request (2s timeout = potential 8s delay), a background thread checks health every 5s and caches the result. The hot path reads from cache — zero added latency.</div>
+            </div>
+          </div>
+          <div class="imp-row" onclick="this.classList.toggle('open')">
+            <span class="arrow">▶</span>
+            <div>
+              <div class="ir-main">Thread-safe iterator — concurrent requests can't collide</div>
+              <div class="ir-detail">The round-robin counter is guarded by a threading.Lock(). Without it, two simultaneous requests could both read the same counter and both go to Server 1, skipping Server 2 entirely.</div>
+            </div>
+          </div>
+          <div class="imp-row" onclick="this.classList.toggle('open')">
+            <span class="arrow">▶</span>
+            <div>
+              <div class="ir-main">Exponential backoff — failed servers aren't hammered</div>
+              <div class="ir-detail">After a health check failure the cooldown doubles: 5s → 10s → 20s → 40s… This prevents a recovering server from being overwhelmed by re-check traffic the instant it comes back.</div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Load Balancer -->
-      <div class="char c-lb" id="ch-lb" style="left:51%;top:36%;" onclick="openBub('lb')">
-        <div class="char-box" id="box-lb">⚖️</div>
-        <div class="char-name">Load Balancer</div>
-        <div class="char-role" id="lb-role">round robin</div>
-        <div class="speech-bubble" id="bub-lb" style="width:250px;">
-          <button class="bubble-close" onclick="closeBub(event,'lb')">✕</button>
-          <div class="bubble-title" id="bub-lb-title">I'm the Load Balancer! ⚖️</div>
-          <div class="bubble-body" id="bub-lb-body">
-            Round Robin is my strategy right now. I cycle through the servers in strict order:
-            1 → 2 → 3 → 4 → 1 ... Nobody gets overloaded, nobody sits idle.
-            Switch my algorithm below and I'll tell you what changes!
+        <!-- Source Hashing -->
+        <div class="algo-panel" id="panel-sh">
+          <div class="at-title">Source Hashing</div>
+          <div class="imp-label">Our improvements</div>
+          <div class="imp-row" onclick="this.classList.toggle('open')">
+            <span class="arrow">▶</span>
+            <div>
+              <div class="ir-main">Content-aware hashing — task type + params, not just IP</div>
+              <div class="ir-detail">Naive IP hashing sends all traffic from one client to one server. Hashing on request content (task type + parameters) provides better distribution because different task types hash to different servers, even from the same IP.</div>
+            </div>
+          </div>
+          <div class="imp-row" onclick="this.classList.toggle('open')">
+            <span class="arrow">▶</span>
+            <div>
+              <div class="ir-main">Fallback on failure — tries next server in ring order</div>
+              <div class="ir-detail">If the deterministically chosen server is unhealthy, the LB tries the next server in a ring (mod 4). The common-case determinism is preserved while avoiding hard failures.</div>
+            </div>
+          </div>
+          <div class="imp-row" onclick="this.classList.toggle('open')">
+            <span class="arrow">▶</span>
+            <div>
+              <div class="ir-main">Optimised hash — first 8 hex chars of MD5</div>
+              <div class="ir-detail">Only the first 8 hex digits of the MD5 are converted to an integer for the modulo operation. Converting all 32 chars of a full MD5 for every request was unnecessary overhead.</div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- 4 Servers (right side) -->
-      <div class="char c-srv char-sm" id="ch-s0" style="right:3%;top:1%;" onclick="openBub('s0')">
-        <div class="char-box" id="box-s0">🖥️</div>
-        <div class="char-name" style="font-size:10px;">Server 1</div>
-        <div class="speech-bubble bub-left" id="bub-s0" style="width:210px;">
-          <button class="bubble-close" onclick="closeBub(event,'s0')">✕</button>
-          <div class="bubble-title">Server 1 here! 🖥️</div>
-          <div class="bubble-body">I do the actual computation — addition, sorting, factorials. Just send me work! I report my load via /load so the LB always knows how busy I am.</div>
-        </div>
-      </div>
-
-      <div class="char c-srv char-sm" id="ch-s1" style="right:3%;top:27%;" onclick="openBub('s1')">
-        <div class="char-box" id="box-s1">🖥️</div>
-        <div class="char-name" style="font-size:10px;">Server 2</div>
-        <div class="speech-bubble bub-left" id="bub-s1" style="width:210px;">
-          <button class="bubble-close" onclick="closeBub(event,'s1')">✕</button>
-          <div class="bubble-title">Server 2 ready! 🖥️</div>
-          <div class="bubble-body">Exactly like Server 1, but a separate container. Four of us together handle 4× the throughput. If I go down, the LB stops sending me traffic within 5 seconds.</div>
-        </div>
-      </div>
-
-      <div class="char c-srv char-sm" id="ch-s2" style="right:3%;top:53%;" onclick="openBub('s2')">
-        <div class="char-box" id="box-s2">🖥️</div>
-        <div class="char-name" style="font-size:10px;">Server 3</div>
-        <div class="speech-bubble bub-left" id="bub-s2" style="width:210px;">
-          <button class="bubble-close" onclick="closeBub(event,'s2')">✕</button>
-          <div class="bubble-title">Server 3 online! 🖥️</div>
-          <div class="bubble-body">My active-request counter uses try/finally — it ALWAYS decrements, even if I crash mid-task. No phantom load accumulating on my side.</div>
-        </div>
-      </div>
-
-      <div class="char c-srv char-sm" id="ch-s3" style="right:3%;top:76%;" onclick="openBub('s3')">
-        <div class="char-box" id="box-s3">🖥️</div>
-        <div class="char-name" style="font-size:10px;">Server 4</div>
-        <div class="speech-bubble bub-left" id="bub-s3" style="width:210px;">
-          <button class="bubble-close" onclick="closeBub(event,'s3')">✕</button>
-          <div class="bubble-title">Server 4 on standby! 🖥️</div>
-          <div class="bubble-body">Health checks run every 5 seconds. If I fail, the LB uses exponential backoff — retry intervals double with each failure, so I'm not hammered while recovering.</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Sim controls -->
-    <div class="sim-bar">
-      <button class="btn btn-accent" id="btn-sim" onclick="toggleSim()">▶ Start</button>
-      <button class="btn btn-gray" onclick="resetSim()">↺ Reset</button>
-      <div class="speed-row">
-        <span style="font-size:12px;color:var(--muted);">Speed:</span>
-        <button class="spd-btn on"  onclick="setSpd(650,this)">Slow</button>
-        <button class="spd-btn"     onclick="setSpd(300,this)">Normal</button>
-        <button class="spd-btn"     onclick="setSpd(100,this)">Fast</button>
-      </div>
-      <div class="sim-counters">
-        <div class="sim-count"><div class="sc-dot" style="background:#3b82f6"></div><span class="sc-val" id="sc0">0</span></div>
-        <div class="sim-count"><div class="sc-dot" style="background:#22c55e"></div><span class="sc-val" id="sc1">0</span></div>
-        <div class="sim-count"><div class="sc-dot" style="background:#f59e0b"></div><span class="sc-val" id="sc2">0</span></div>
-        <div class="sim-count"><div class="sc-dot" style="background:#ef4444"></div><span class="sc-val" id="sc3">0</span></div>
-        <span style="font-size:12px;color:var(--muted);">total: <b id="sc-total">0</b></span>
-      </div>
-    </div>
-  </div>
-
-  <!-- ══ ALGORITHM SELECTOR ═════════════════════════════════════════════════ -->
-  <div class="card">
-    <div class="card-title">Algorithm — click to switch (updates the live system too)</div>
-
-    <div class="algo-tabs">
-      <div class="algo-tab on"  id="tab-rr" onclick="selectAlgo('round_robin')">
-        <span class="at-emoji">🔄</span>Round Robin
-      </div>
-      <div class="algo-tab" id="tab-sh" onclick="selectAlgo('source_hashing')">
-        <span class="at-emoji">#️⃣</span>Source Hashing
-      </div>
-      <div class="algo-tab" id="tab-ll" onclick="selectAlgo('least_loaded')">
-        <span class="at-emoji">📊</span>Least Loaded
-      </div>
-    </div>
-
-    <!-- Round Robin panel -->
-    <div class="algo-panel show" id="panel-rr">
-      <div class="algo-chart">
-        <canvas id="cv-rr" width="130" height="130"></canvas>
-        <div class="chart-caption">Even distribution</div>
-      </div>
-      <div class="algo-text">
-        <div class="at-title">Round Robin</div>
-        <div class="at-desc">
-          Cycles through servers in fixed order: 1 → 2 → 3 → 4 → 1…
-          Simple, predictable, zero state needed. Best when all servers are equally capable
-          and tasks take similar amounts of time.
-        </div>
-        <div class="imp-label">Our improvements — click to expand each</div>
-        <div class="imp-row" onclick="this.classList.toggle('open')">
-          <span class="arrow">▶</span>
-          <div>
-            <div class="ir-main">Background health checks — unhealthy servers auto-skipped</div>
-            <div class="ir-detail">Instead of pinging every server on every request (2s timeout = potential 8s delay), a background thread checks health every 5s and caches the result. The hot path reads from cache — zero added latency.</div>
+        <!-- Least Loaded -->
+        <div class="algo-panel" id="panel-ll">
+          <div class="at-title">Least Loaded</div>
+          <div class="imp-label">Our improvements</div>
+          <div class="imp-row" onclick="this.classList.toggle('open')">
+            <span class="arrow">▶</span>
+            <div>
+              <div class="ir-main">Parallel /load polling — routing overhead ~1–3ms total</div>
+              <div class="ir-detail">All 4 servers are queried in parallel using concurrent.futures. Total routing overhead is ~1–3ms (the slowest server's response), not the sum of all four. Each server exposes /load returning its current active request count.</div>
+            </div>
+          </div>
+          <div class="imp-row" onclick="this.classList.toggle('open')">
+            <span class="arrow">▶</span>
+            <div>
+              <div class="ir-main">Jitter tie-breaking — prevents thundering herd on "lightest" server</div>
+              <div class="ir-detail">When servers are tied on load, a small random jitter (0–10ms) is added to each server's score before comparison. This ensures concurrent requests distribute across tied servers rather than all picking the same one and instantly creating a new hotspot.</div>
+            </div>
+          </div>
+          <div class="imp-row" onclick="this.classList.toggle('open')">
+            <span class="arrow">▶</span>
+            <div>
+              <div class="ir-main">Guaranteed decrement — try/finally on every request</div>
+              <div class="ir-detail">The server's active-request counter is incremented on arrival and decremented in a finally block. Even if the request handler raises an exception mid-execution, the counter decrements — no phantom load accumulation.</div>
+            </div>
           </div>
         </div>
-        <div class="imp-row" onclick="this.classList.toggle('open')">
-          <span class="arrow">▶</span>
-          <div>
-            <div class="ir-main">Thread-safe iterator — concurrent requests can't collide</div>
-            <div class="ir-detail">The round-robin counter is guarded by a threading.Lock(). Without it, two simultaneous requests could both read the same counter and both go to Server 1, skipping Server 2 entirely.</div>
-          </div>
-        </div>
-        <div class="imp-row" onclick="this.classList.toggle('open')">
-          <span class="arrow">▶</span>
-          <div>
-            <div class="ir-main">Exponential backoff — failed servers aren't hammered</div>
-            <div class="ir-detail">After a health check failure the cooldown doubles: 5s → 10s → 20s → 40s… This prevents a recovering server from being overwhelmed by re-check traffic the instant it comes back.</div>
-          </div>
-        </div>
-      </div>
-    </div>
 
-    <!-- Source Hashing panel -->
-    <div class="algo-panel" id="panel-sh">
-      <div class="algo-chart">
-        <canvas id="cv-sh" width="130" height="130"></canvas>
-        <div class="chart-caption">Sticky by content</div>
-      </div>
-      <div class="algo-text">
-        <div class="at-title">Source Hashing</div>
-        <div class="at-desc">
-          Hashes the request content (task type + parameters) to deterministically pick a server.
-          Identical requests always go to the same server — great for caching.
-          <b>Watch out:</b> a single-source attacker concentrates all load on one server, saturating it before the IDMS acts.
-        </div>
-        <div class="imp-label">Our improvements — click to expand each</div>
-        <div class="imp-row" onclick="this.classList.toggle('open')">
-          <span class="arrow">▶</span>
-          <div>
-            <div class="ir-main">Content-aware hashing — task type + params + time bucket</div>
-            <div class="ir-detail">Naive IP hashing sends all traffic from one client to one server. Hashing on request content (task type + parameters) provides better distribution because different task types hash to different servers, even from the same IP.</div>
-          </div>
-        </div>
-        <div class="imp-row" onclick="this.classList.toggle('open')">
-          <span class="arrow">▶</span>
-          <div>
-            <div class="ir-main">Fallback on failure — tries next server in ring order</div>
-            <div class="ir-detail">If the deterministically chosen server is unhealthy, the LB tries the next server in a ring (mod 4). The common-case determinism is preserved while avoiding hard failures.</div>
-          </div>
-        </div>
-        <div class="imp-row" onclick="this.classList.toggle('open')">
-          <span class="arrow">▶</span>
-          <div>
-            <div class="ir-main">Optimised hash — first 8 hex chars of MD5</div>
-            <div class="ir-detail">Only the first 8 hex digits of the MD5 are converted to an integer for the modulo operation. Converting all 32 chars of a full MD5 for every request was unnecessary overhead.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Least Loaded panel -->
-    <div class="algo-panel" id="panel-ll">
-      <div class="algo-chart">
-        <canvas id="cv-ll" width="130" height="130"></canvas>
-        <div class="chart-caption">Adaptive by load</div>
-      </div>
-      <div class="algo-text">
-        <div class="at-title">Least Loaded</div>
-        <div class="at-desc">
-          Queries each server's active request count at routing time and picks the least busy one.
-          Best when tasks have varying processing times (factorial takes 10× longer than addition),
-          since round-robin would pile long tasks onto one server while others sit idle.
-        </div>
-        <div class="imp-label">Our improvements — click to expand each</div>
-        <div class="imp-row" onclick="this.classList.toggle('open')">
-          <span class="arrow">▶</span>
-          <div>
-            <div class="ir-main">Real-time load queries — parallel /load endpoint polling</div>
-            <div class="ir-detail">All 4 servers are queried in parallel using concurrent.futures. Total routing overhead is ~1–3ms (the slowest server's response), not the sum of all four. Each server exposes /load returning its current active request count.</div>
-          </div>
-        </div>
-        <div class="imp-row" onclick="this.classList.toggle('open')">
-          <span class="arrow">▶</span>
-          <div>
-            <div class="ir-main">Jitter tie-breaking — prevents thundering herd on "lightest" server</div>
-            <div class="ir-detail">When servers are tied on load, a small random jitter (0–10ms) is added to each server's score before comparison. This ensures concurrent requests distribute across tied servers rather than all picking the same one and instantly creating a new hotspot.</div>
-          </div>
-        </div>
-        <div class="imp-row" onclick="this.classList.toggle('open')">
-          <span class="arrow">▶</span>
-          <div>
-            <div class="ir-main">Guaranteed decrement — try/finally on every request</div>
-            <div class="ir-detail">The server's active-request counter is incremented on arrival and decremented in a finally block. Even if the request handler raises an exception mid-execution, the counter decrements — no phantom load accumulation.</div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
+      </div><!-- /lb-algo-col -->
+    </div><!-- /lb-split -->
+  </div><!-- /card -->
 
   <!-- ══ UNDER THE HOOD (collapsed) ════════════════════════════════════════ -->
   <div class="card">
@@ -522,45 +366,7 @@
 {% block scripts %}
 <script>
 // ═══════════════════════════════════════════════════════════════════
-// 1. SPEECH BUBBLES
-// ═══════════════════════════════════════════════════════════════════
-let activeBub = null;
-
-function openBub(id) {
-  const el = document.getElementById('bub-' + id);
-  if (!el) return;
-  if (activeBub && activeBub !== el) { activeBub.classList.remove('show'); }
-  const isOpen = el.classList.contains('show');
-  el.classList.toggle('show', !isOpen);
-  activeBub = isOpen ? null : el;
-
-  // Bounce the character box
-  const boxMap = { client:'box-client', idms:'box-idms', lb:'box-lb',
-                   s0:'box-s0', s1:'box-s1', s2:'box-s2', s3:'box-s3' };
-  const box = document.getElementById(boxMap[id]);
-  if (box && !isOpen) {
-    box.classList.remove('popped');
-    void box.offsetWidth;
-    box.classList.add('popped');
-    setTimeout(() => box.classList.remove('popped'), 600);
-  }
-}
-
-function closeBub(e, id) {
-  e.stopPropagation();
-  const el = document.getElementById('bub-' + id);
-  el.classList.remove('show');
-  if (activeBub === el) activeBub = null;
-}
-
-document.addEventListener('click', e => {
-  if (activeBub && !e.target.closest('.char')) {
-    activeBub.classList.remove('show'); activeBub = null;
-  }
-});
-
-// ═══════════════════════════════════════════════════════════════════
-// 2. SVG CONNECTOR LINES  (drawn after layout so positions are real)
+// 1. SVG CONNECTOR LINES
 // ═══════════════════════════════════════════════════════════════════
 function drawLines() {
   const scene = document.getElementById('scene');
@@ -572,10 +378,7 @@ function drawLines() {
     if (!el) return null;
     const box = el.querySelector('.char-box');
     const br  = box.getBoundingClientRect();
-    return {
-      x: br.left - R.left + br.width  / 2,
-      y: br.top  - R.top  + br.height / 2,
-    };
+    return { x: br.left - R.left + br.width/2, y: br.top - R.top + br.height/2 };
   }
 
   const client = center('ch-client');
@@ -583,49 +386,39 @@ function drawLines() {
   const lb     = center('ch-lb');
   const srvs   = [0,1,2,3].map(i => center('ch-s' + i));
 
+  const ws = 'stroke="#e5e7eb" stroke-width="2.5" fill="none" stroke-dasharray="6,4" marker-end="url(#arr)"';
   let html = `<defs>
     <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
       <path d="M0,0 L0,6 L8,3 z" fill="#d1d5db"/>
-    </marker>
-    <marker id="arr-active" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
-      <path d="M0,0 L0,6 L8,3 z" fill="#2563eb"/>
-    </marker>
-  </defs>`;
+    </marker></defs>`;
 
-  // Wire style
-  const ws = 'stroke="#e5e7eb" stroke-width="2.5" fill="none" stroke-dasharray="6,4" marker-end="url(#arr)"';
-
-  // Client → IDMS
-  html += `<line id="wire-ci" x1="${client.x}" y1="${client.y}" x2="${idms.x - 34}" y2="${idms.y}" ${ws}/>`;
-  // IDMS → LB
-  html += `<line id="wire-il" x1="${idms.x + 34}" y1="${idms.y}" x2="${lb.x - 34}" y2="${lb.y}" ${ws}/>`;
-  // LB → each server
-  srvs.forEach((s, i) => {
-    html += `<line id="wire-ls${i}" x1="${lb.x + 34}" y1="${lb.y}" x2="${s.x - 28}" y2="${s.y}" ${ws}/>`;
+  html += `<line x1="${client.x}" y1="${client.y}" x2="${idms.x-32}" y2="${idms.y}" ${ws}/>`;
+  html += `<line x1="${idms.x+32}" y1="${idms.y}" x2="${lb.x-32}" y2="${lb.y}" ${ws}/>`;
+  srvs.forEach(s => {
+    html += `<line x1="${lb.x+32}" y1="${lb.y}" x2="${s.x-24}" y2="${s.y}" ${ws}/>`;
   });
-
   svg.innerHTML = html;
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 3. PACKET ANIMATION
+// 2. PACKET ANIMATION
 // ═══════════════════════════════════════════════════════════════════
 const COLORS = ['#3b82f6','#22c55e','#f59e0b','#ef4444'];
 
 function getCenter(id) {
-  const scene  = document.getElementById('scene');
-  const sRect  = scene.getBoundingClientRect();
-  const el     = document.getElementById(id);
-  const box    = el.querySelector('.char-box');
-  const br     = box.getBoundingClientRect();
+  const scene = document.getElementById('scene');
+  const sRect = scene.getBoundingClientRect();
+  const el    = document.getElementById(id);
+  const box   = el.querySelector('.char-box');
+  const br    = box.getBoundingClientRect();
   return {
-    x: ((br.left - sRect.left + br.width  / 2) / sRect.width)  * 100,
-    y: ((br.top  - sRect.top  + br.height / 2) / sRect.height) * 100,
+    x: ((br.left - sRect.left + br.width/2)  / sRect.width)  * 100,
+    y: ((br.top  - sRect.top  + br.height/2) / sRect.height) * 100,
   };
 }
 
 function launchPacket(target) {
-  const scene = document.getElementById('scene');
+  const scene  = document.getElementById('scene');
   const client = getCenter('ch-client');
   const idms   = getCenter('ch-idms');
   const lb     = getCenter('ch-lb');
@@ -636,30 +429,23 @@ function launchPacket(target) {
   dot.style.cssText = `left:${client.x}%;top:${client.y}%;background:${COLORS[target]};transition:none;`;
   scene.appendChild(dot);
 
-  // Hop 1: → IDMS  (after 1 frame so initial position is applied)
   requestAnimationFrame(() => {
     dot.style.transition = 'left 0.13s ease, top 0.13s ease';
     dot.style.left = idms.x + '%'; dot.style.top = idms.y + '%';
   });
-
-  // Hop 2: → LB
   setTimeout(() => { dot.style.left = lb.x + '%'; dot.style.top = lb.y + '%'; }, 160);
-
-  // Hop 3: → Server
   setTimeout(() => {
     dot.style.left = srv.x + '%'; dot.style.top = srv.y + '%';
-    // Pulse server box
     const box = document.getElementById('box-s' + target);
     box.classList.remove('popped'); void box.offsetWidth; box.classList.add('popped');
     setTimeout(() => box.classList.remove('popped'), 500);
   }, 320);
-
   setTimeout(() => { dot.style.opacity = '0'; }, 520);
   setTimeout(() => dot.remove(), 700);
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 4. SIMULATION
+// 3. SIMULATION
 // ═══════════════════════════════════════════════════════════════════
 let simOn = false, simTimer = null, simSpeed = 650;
 let algo = 'round_robin', rrIdx = 0;
@@ -685,9 +471,9 @@ function toggleSim() {
 
 function resetSim() {
   counts.fill(0); rrIdx = 0;
-  [0,1,2,3].forEach(i => { document.getElementById('sc'+i).textContent = '0'; });
+  [0,1,2,3].forEach(i => document.getElementById('sc'+i).textContent = '0');
   document.getElementById('sc-total').textContent = '0';
-  drawCharts();
+  drawDistChart();
 }
 
 function pickSrv() {
@@ -698,11 +484,8 @@ function pickSrv() {
     let h = 0; for (let i = 0; i < t.length; i++) h = ((h<<5)-h+t.charCodeAt(i))|0;
     return Math.abs(h) % 4;
   }
-  // least_loaded
   let min = Infinity, cands = [];
-  counts.forEach((v,i) => {
-    if (v < min) { min=v; cands=[i]; } else if (v===min) cands.push(i);
-  });
+  counts.forEach((v,i) => { if (v < min) { min=v; cands=[i]; } else if (v===min) cands.push(i); });
   return cands[Math.floor(Math.random() * cands.length)];
 }
 
@@ -712,118 +495,78 @@ function tick() {
   launchPacket(t);
   [0,1,2,3].forEach(i => document.getElementById('sc'+i).textContent = counts[i]);
   document.getElementById('sc-total').textContent = counts.reduce((a,b)=>a+b,0);
-  drawCharts();
+  drawDistChart();
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 5. ALGORITHM SELECTION
+// 4. ALGORITHM SELECTION
 // ═══════════════════════════════════════════════════════════════════
-const LB_SPEECHES = {
-  round_robin:    { title: 'Round Robin mode! 🔄', body: 'I cycle through servers strictly: 1 → 2 → 3 → 4 → 1... Simple, predictable, perfectly fair. Every server gets the same number of requests. Great when tasks take similar time!' },
-  source_hashing: { title: 'Source Hashing mode! #️⃣', body: 'Same request content always maps to the same server. Caching loves me! But watch out — a single-source attacker concentrates all load on one server, which can saturate it before the IDMS blocks them.' },
-  least_loaded:   { title: 'Least Loaded mode! 📊', body: 'I check everyone\'s workload before deciding. Factorial tasks take 10× longer than addition — so I send long tasks to whoever\'s least busy. Smart routing for mixed workloads!' },
-};
-
-const ALGO_ROLES = {
-  round_robin: 'round robin', source_hashing: 'source hashing', least_loaded: 'least loaded',
-};
+const ALGO_ROLES = { round_robin:'round robin', source_hashing:'source hashing', least_loaded:'least loaded' };
+const ALGO_IDS   = { round_robin:'rr', source_hashing:'sh', least_loaded:'ll' };
 
 function selectAlgo(a) {
-  algo = a;
-  rrIdx = 0;
-
-  // Tab highlights
+  algo = a; rrIdx = 0;
   document.querySelectorAll('.algo-tab').forEach(el => el.classList.remove('on'));
-  document.getElementById('tab-' + {round_robin:'rr',source_hashing:'sh',least_loaded:'ll'}[a]).classList.add('on');
-
-  // Panel switch
+  document.getElementById('tab-' + ALGO_IDS[a]).classList.add('on');
   document.querySelectorAll('.algo-panel').forEach(el => el.classList.remove('show'));
-  document.getElementById('panel-' + {round_robin:'rr',source_hashing:'sh',least_loaded:'ll'}[a]).classList.add('show');
-
-  // LB character speech update
-  const sp = LB_SPEECHES[a];
-  document.getElementById('bub-lb-title').textContent = sp.title;
-  document.getElementById('bub-lb-body').textContent  = sp.body;
+  document.getElementById('panel-' + ALGO_IDS[a]).classList.add('show');
   document.getElementById('lb-role').textContent = ALGO_ROLES[a];
-
-  // Open LB bubble briefly to draw attention
-  openBub('lb');
-
-  drawCharts();
-
-  // Tell real LB
+  drawDistChart();
   fetch('/api/algorithm', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({algorithm:a}) }).catch(()=>{});
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 6. CANVAS CHARTS (live distribution)
+// 5. DISTRIBUTION CHART (single canvas, full-width)
 // ═══════════════════════════════════════════════════════════════════
 const SRV_COLORS = ['#3b82f6','#22c55e','#f59e0b','#ef4444'];
 
-function drawBar(cvId, label) {
-  const cv  = document.getElementById(cvId);
+function drawDistChart() {
+  const cv  = document.getElementById('cv-dist');
   if (!cv) return;
+  // Sync canvas pixel width to CSS display width
+  cv.width  = cv.offsetWidth || cv.parentElement.offsetWidth;
+  cv.height = 70;
   const ctx = cv.getContext('2d');
   const W = cv.width, H = cv.height;
   ctx.clearRect(0, 0, W, H);
 
   const total = counts.reduce((a,b)=>a+b,0) || 1;
-  const cw = (W - 16) / 4;
-  const maxH = H - 28;
+  const pad = 10, gap = 8;
+  const cw  = (W - pad*2 - gap*3) / 4;
+  const maxH = H - 22;
 
   for (let i = 0; i < 4; i++) {
     const frac = counts[i] / total;
-    const bh   = Math.max(3, frac * maxH);
-    const x    = 8 + i * cw;
+    const bh   = Math.max(2, frac * maxH);
+    const x    = pad + i * (cw + gap);
 
-    // Track background
     ctx.fillStyle = SRV_COLORS[i] + '22';
-    ctx.beginPath(); ctx.roundRect(x+2, H-24-maxH, cw-6, maxH, 4); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(x, H-18-maxH, cw, maxH, 3); ctx.fill();
 
-    // Filled bar
     ctx.fillStyle = SRV_COLORS[i];
-    ctx.beginPath(); ctx.roundRect(x+2, H-24-bh, cw-6, bh, 4); ctx.fill();
+    ctx.beginPath(); ctx.roundRect(x, H-18-bh, cw, bh, 3); ctx.fill();
 
-    // % label above bar
     ctx.fillStyle = SRV_COLORS[i];
-    ctx.font = `bold 9px sans-serif`; ctx.textAlign = 'center';
-    ctx.fillText(Math.round(frac*100)+'%', x+cw/2-1, H-26-bh-2);
+    ctx.font = 'bold 9px sans-serif'; ctx.textAlign = 'center';
+    ctx.fillText(Math.round(frac*100)+'%', x + cw/2, H-20-bh-2);
 
-    // Server label
     ctx.fillStyle = '#6b7280'; ctx.font = '9px sans-serif';
-    ctx.fillText('S'+(i+1), x+cw/2-1, H-8);
+    ctx.fillText('S'+(i+1), x + cw/2, H-4);
   }
-
-  // Caption label inside bottom
-  ctx.fillStyle = '#9ca3af'; ctx.font = '9px sans-serif'; ctx.textAlign = 'left';
-  ctx.fillText(label, 4, 10);
-}
-
-function drawCharts() {
-  drawBar('cv-rr', algo==='round_robin'    ? '▶ active' : '');
-  drawBar('cv-sh', algo==='source_hashing' ? '▶ active' : '');
-  drawBar('cv-ll', algo==='least_loaded'   ? '▶ active' : '');
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 7. COLLAPSIBLE HOOD
+// 6. UNDER THE HOOD
 // ═══════════════════════════════════════════════════════════════════
 function toggleHood() {
-  const hdr  = document.getElementById('hood-hdr');
-  const body = document.getElementById('hood-body');
-  hdr.classList.toggle('open');
-  body.classList.toggle('open');
+  document.getElementById('hood-hdr').classList.toggle('open');
+  document.getElementById('hood-body').classList.toggle('open');
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// 8. INIT
+// 7. INIT
 // ═══════════════════════════════════════════════════════════════════
-window.addEventListener('load', () => {
-  drawLines();
-  drawCharts();
-});
-window.addEventListener('resize', () => {
-  drawLines();
-});
+window.addEventListener('load', () => { drawLines(); drawDistChart(); });
+window.addEventListener('resize', () => { drawLines(); drawDistChart(); });
 </script>
 {% endblock %}

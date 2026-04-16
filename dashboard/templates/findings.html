@@ -110,6 +110,38 @@ tr.row-open .cov-detail { display: block; }
   color: var(--muted); display: flex; align-items: center; gap: 10px;
 }
 .section-sep::after { content:''; flex:1; height:1px; background:var(--border); }
+
+/* ── Scenario mode comparison ── */
+.sim-grid { display: grid; grid-template-columns: repeat(2,1fr); gap: 16px; }
+.sim-card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; background: var(--card); }
+.sim-header { padding: 12px 16px; border-bottom: 1px solid var(--border); background: var(--bg); }
+.sim-title { font-size: 13px; font-weight: 700; color: var(--text); }
+.sim-desc  { font-size: 11px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+.sim-modes { display: grid; grid-template-columns: repeat(3,1fr); }
+.sim-mode  { padding: 12px 14px; border-right: 1px solid var(--border); }
+.sim-mode:last-child { border-right: none; }
+.sm-lbl  { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--muted); margin-bottom: 5px; }
+.sm-rate { font-size: 24px; font-weight: 800; line-height: 1; margin-bottom: 5px; }
+.sm-bar-wrap { height: 4px; background: #e5e7eb; border-radius: 2px; margin-bottom: 8px; overflow: hidden; }
+.sm-bar  { height: 100%; border-radius: 2px; width: 0; transition: width 1s cubic-bezier(0.4,0,0.2,1); }
+.sm-note { font-size: 11px; color: var(--muted); line-height: 1.45; }
+.sm-none .sm-rate { color: #dc2626; }
+.sm-rule .sm-rate { color: #d97706; }
+.sm-full .sm-rate { color: #16a34a; }
+.sm-full-0 .sm-rate { color: #dc2626; }
+.evade-pill   { display:inline-block; padding:1px 7px; border-radius:10px; font-size:10px; font-weight:700; background:#fee2e2; color:#dc2626; }
+.partial-pill { display:inline-block; padding:1px 7px; border-radius:10px; font-size:10px; font-weight:700; background:#fef3c7; color:#92400e; }
+.caught-pill  { display:inline-block; padding:1px 7px; border-radius:10px; font-size:10px; font-weight:700; background:#dcfce7; color:#15803d; }
+
+/* ── Latency comparison bars ── */
+.latency-rows { display: flex; flex-direction: column; gap: 12px; }
+.lat-row { display: flex; align-items: center; gap: 12px; }
+.lat-label { width: 200px; flex-shrink: 0; font-size: 12px; color: var(--text); line-height: 1.5; }
+.lat-bar-wrap { flex: 1; height: 26px; background: #f3f4f6; border-radius: 5px; overflow: hidden; position: relative; }
+.lat-bar { height: 100%; border-radius: 5px; width: 0; transition: width 1s ease; display: flex; align-items: center; padding-left: 10px; }
+.lat-val  { font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap; }
+.lat-stdev { position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 10px; color: #9ca3af; white-space: nowrap; pointer-events: none; }
+.lat-note { width: 160px; flex-shrink: 0; font-size: 11px; }
 {% endblock %}
 
 {% block body %}
@@ -141,6 +173,127 @@ tr.row-open .cov-detail { display: block; }
       <div class="fc-label">False Positive Rate</div>
       <div class="fc-number"><span class="count-up" data-target="0.00" data-decimals="2">0.00</span><span class="fc-unit">%</span></div>
       <div class="fc-desc">1,800 legitimate requests at 15&nbsp;req/s. Zero blocks, zero deprioritisations. Full IDMS active.</div>
+    </div>
+  </div>
+
+  <!-- ── Scenario mode comparison ── -->
+  <div class="card sim-card-outer">
+    <div class="card-title">Attack simulation &mdash; three configurations compared</div>
+    <p style="font-size:12px;color:var(--muted);margin:-4px 0 16px;">Same attack, three setups: <b>S2</b> no IDMS &nbsp;&middot;&nbsp; <b>S3</b> rule engine only &nbsp;&middot;&nbsp; <b>S4</b> full two-stage IDMS</p>
+    <div class="sim-grid">
+
+      <!-- Rate Flood -->
+      <div class="sim-card">
+        <div class="sim-header">
+          <div class="sim-title">Rate Flood</div>
+          <div class="sim-desc">250 requests in ~2.5 s from one IP &mdash; exceeds the 200 req / 10 s rate ceiling</div>
+        </div>
+        <div class="sim-modes">
+          <div class="sim-mode sm-none">
+            <div class="sm-lbl">No IDMS (S2)</div>
+            <div class="sm-rate">0%</div>
+            <div class="sm-bar-wrap"><div class="sm-bar" data-w="0" style="background:#dc2626"></div></div>
+            <div class="sm-note"><span class="evade-pill">Evades</span><br>All 250 hit servers. Collateral: 5.9% of legit requests fail, stdev &times;12.</div>
+          </div>
+          <div class="sim-mode sm-rule">
+            <div class="sm-lbl">Rule-only (S3)</div>
+            <div class="sm-rate">73.3%</div>
+            <div class="sm-bar-wrap"><div class="sm-bar" data-w="73.3" style="background:#d97706"></div></div>
+            <div class="sm-note"><span class="partial-pill">Partial</span><br>550 / 750 blocked. First 200 req/10 s always pass &mdash; structural ceiling.</div>
+          </div>
+          <div class="sim-mode sm-full">
+            <div class="sm-lbl">Full IDMS (S4)</div>
+            <div class="sm-rate">73.3%</div>
+            <div class="sm-bar-wrap"><div class="sm-bar" data-w="73.3" style="background:#16a34a"></div></div>
+            <div class="sm-note"><span class="partial-pill">Partial</span><br>Identical to rule-only. Anomaly engine adds nothing for volume floods.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- SQL Injection -->
+      <div class="sim-card">
+        <div class="sim-header">
+          <div class="sim-title">SQL / NoSQL Injection</div>
+          <div class="sim-desc">300 payloads across 14 families (UNION SELECT, $where, OR 1=1, DROP TABLE&hellip;)</div>
+        </div>
+        <div class="sim-modes">
+          <div class="sim-mode sm-none">
+            <div class="sm-lbl">No IDMS (S2)</div>
+            <div class="sm-rate">0%</div>
+            <div class="sm-bar-wrap"><div class="sm-bar" data-w="0" style="background:#dc2626"></div></div>
+            <div class="sm-note"><span class="evade-pill">Evades</span><br>All queries reach real backends. Database fully exposed.</div>
+          </div>
+          <div class="sim-mode sm-rule">
+            <div class="sm-lbl">Rule-only (S3)</div>
+            <div class="sm-rate">100%</div>
+            <div class="sm-bar-wrap"><div class="sm-bar" data-w="100" style="background:#d97706"></div></div>
+            <div class="sm-note"><span class="caught-pill">Caught</span><br>300 / 300 silently redirected to honeypot. Attacker sees fake 200&nbsp;OK.</div>
+          </div>
+          <div class="sim-mode sm-full">
+            <div class="sm-lbl">Full IDMS (S4)</div>
+            <div class="sm-rate">100%</div>
+            <div class="sm-bar-wrap"><div class="sm-bar" data-w="100" style="background:#16a34a"></div></div>
+            <div class="sm-note"><span class="caught-pill">Caught</span><br>Identical &mdash; rule fires before anomaly engine. Zero signal to attacker.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Slow-rate burst -->
+      <div class="sim-card">
+        <div class="sim-header">
+          <div class="sim-title">Slow-Rate Burst</div>
+          <div class="sim-desc">Micro-bursts at ~10 req/s &mdash; sustained rate stays well under the 200 req/10 s ceiling</div>
+        </div>
+        <div class="sim-modes">
+          <div class="sim-mode sm-none">
+            <div class="sm-lbl">No IDMS (S2)</div>
+            <div class="sm-rate">0%</div>
+            <div class="sm-bar-wrap"><div class="sm-bar" data-w="0" style="background:#dc2626"></div></div>
+            <div class="sm-note"><span class="evade-pill">Evades</span><br>No defence. All requests pass undetected.</div>
+          </div>
+          <div class="sim-mode sm-rule">
+            <div class="sm-lbl">Rule-only (S3)</div>
+            <div class="sm-rate">0%</div>
+            <div class="sm-bar-wrap"><div class="sm-bar" data-w="0" style="background:#d97706"></div></div>
+            <div class="sm-note"><span class="evade-pill">Evades</span><br>Ceiling never crossed. Rules are blind to IAT timing patterns.</div>
+          </div>
+          <div class="sim-mode sm-full sm-full-0">
+            <div class="sm-lbl">Full IDMS (S4)</div>
+            <div class="sm-rate">0%</div>
+            <div class="sm-bar-wrap"><div class="sm-bar" data-w="0" style="background:#dc2626"></div></div>
+            <div class="sm-note"><span class="evade-pill">Evades</span><br>Baseline contamination: attacker bursts collapse rolling median to 4.34&nbsp;ms. Z&nbsp;max&nbsp;=&nbsp;1.17 &lt; threshold&nbsp;1.5.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ramp attack -->
+      <div class="sim-card">
+        <div class="sim-header">
+          <div class="sim-title">Ramp Attack</div>
+          <div class="sim-desc">Gradual rate escalation 5 &rarr; 17 req/s, new IP each step &mdash; designed to evade both layers</div>
+        </div>
+        <div class="sim-modes">
+          <div class="sim-mode sm-none">
+            <div class="sm-lbl">No IDMS (S2)</div>
+            <div class="sm-rate">0%</div>
+            <div class="sm-bar-wrap"><div class="sm-bar" data-w="0" style="background:#dc2626"></div></div>
+            <div class="sm-note"><span class="evade-pill">Evades</span><br>All 1,375 requests pass. No defence at any step.</div>
+          </div>
+          <div class="sim-mode sm-rule">
+            <div class="sm-lbl">Rule-only (S3)</div>
+            <div class="sm-rate">0%</div>
+            <div class="sm-bar-wrap"><div class="sm-bar" data-w="0" style="background:#d97706"></div></div>
+            <div class="sm-note"><span class="evade-pill">Evades</span><br>17 req/s &times; 10 s = 170 &lt; 200 ceiling. Rate limit never fires.</div>
+          </div>
+          <div class="sim-mode sm-full">
+            <div class="sm-lbl">Full IDMS (S4)</div>
+            <div class="sm-rate">18.8%</div>
+            <div class="sm-bar-wrap"><div class="sm-bar" data-w="18.8" style="background:#16a34a"></div></div>
+            <div class="sm-note"><span class="partial-pill">Partial</span><br>Steps 1&ndash;3 evade (5&ndash;11 req/s). Steps 4&ndash;5 caught via anomaly escalation (8 strikes &rarr; 30 s block).</div>
+          </div>
+        </div>
+      </div>
+
     </div>
   </div>
 
@@ -210,6 +363,52 @@ tr.row-open .cov-detail { display: block; }
         they share the same backend pool. Without IDMS, 5.9% of legitimate requests fail and latency variance rises 12&times;.
         This is the motivating result for inline inspection.
       </div>
+    </div>
+  </div>
+
+  <!-- ── Latency comparison ── -->
+  <div class="card">
+    <div class="card-title">Legitimate traffic latency &mdash; across configurations (round_robin, median)</div>
+    <div class="latency-rows" id="lat-rows">
+
+      <div class="lat-row">
+        <div class="lat-label"><b>S1 &mdash; Baseline</b><br><span style="font-size:11px;color:var(--muted)">No IDMS, no attack</span></div>
+        <div class="lat-bar-wrap">
+          <div class="lat-bar" data-w="55.1" style="background:#16a34a">
+            <span class="lat-val">165.4 ms</span>
+          </div>
+          <span class="lat-stdev">&sigma;&nbsp;=&nbsp;42.7 ms</span>
+        </div>
+        <div class="lat-note" style="color:#16a34a;font-weight:600">Performance ceiling</div>
+      </div>
+
+      <div class="lat-row">
+        <div class="lat-label"><b>S2 &mdash; Flood, no IDMS</b><br><span style="font-size:11px;color:var(--muted)">No protection, attacker active</span></div>
+        <div class="lat-bar-wrap">
+          <div class="lat-bar" data-w="52.1" style="background:#dc2626">
+            <span class="lat-val">156.4 ms</span>
+          </div>
+          <span class="lat-stdev" style="color:#dc2626">&sigma;&nbsp;=&nbsp;521.6 ms !</span>
+        </div>
+        <div class="lat-note" style="color:#dc2626;font-weight:600">Median OK &mdash; variance &times;12</div>
+      </div>
+
+      <div class="lat-row">
+        <div class="lat-label"><b>S4 &mdash; Full IDMS</b><br><span style="font-size:11px;color:var(--muted)">Both stages active, no attack</span></div>
+        <div class="lat-bar-wrap">
+          <div class="lat-bar" data-w="54.3" style="background:#2563eb">
+            <span class="lat-val">162.9 ms</span>
+          </div>
+          <span class="lat-stdev">&sigma;&nbsp;=&nbsp;44.2 ms</span>
+        </div>
+        <div class="lat-note" style="color:#2563eb;font-weight:600">&minus;1.5% vs baseline (noise)</div>
+      </div>
+
+    </div>
+    <div class="highlight-box green" style="margin-top:14px; font-size:12px;">
+      <b>Key result:</b> The full two-stage IDMS (S4) adds <b>zero measurable latency overhead</b> &mdash; the &minus;2.5&nbsp;ms delta vs S1 is within measurement noise (&sigma;&nbsp;&asymp;&nbsp;43&nbsp;ms).
+      S2 reveals why the IDMS matters: the flood leaves legitimate median latency roughly unchanged but inflates stdev by 12&times;, meaning a fraction of requests spike unpredictably.
+      Those are the 5.9% that fail.
     </div>
   </div>
 
@@ -379,6 +578,16 @@ function countUp(el) {
   }, duration / steps);
 }
 
+// ── Bar animation helper ───────────────────────────────────────────────────
+function animateBars(container) {
+  container.querySelectorAll('.sm-bar[data-w]').forEach(b => {
+    b.style.width = b.dataset.w + '%';
+  });
+  container.querySelectorAll('.lat-bar[data-w]').forEach(b => {
+    b.style.width = b.dataset.w + '%';
+  });
+}
+
 // Use IntersectionObserver so counters animate when scrolled into view
 const observer = new IntersectionObserver(entries => {
   entries.forEach(e => {
@@ -390,5 +599,17 @@ const observer = new IntersectionObserver(entries => {
 }, { threshold: 0.3 });
 
 document.querySelectorAll('.findings-hero').forEach(el => observer.observe(el));
+
+// Animate sim bars and latency bars on scroll
+const barObserver = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      animateBars(e.target);
+      barObserver.unobserve(e.target);
+    }
+  });
+}, { threshold: 0.2 });
+
+document.querySelectorAll('.sim-card-outer, #lat-rows').forEach(el => barObserver.observe(el));
 </script>
 {% endblock %}
