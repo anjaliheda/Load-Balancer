@@ -43,33 +43,29 @@
 
 /* ── Rule blocks grid ── */
 .rule-grid {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px;
 }
 @media (max-width: 900px) { .rule-grid { grid-template-columns: repeat(2, 1fr); } }
 
 .rule-block {
   border: 1px solid var(--border); border-radius: 10px;
-  padding: 16px; background: var(--bg);
-  border-top: 4px solid var(--border);
+  padding: 14px 16px; background: var(--bg);
+  border-left: 4px solid var(--border);
 }
 .rb-header {
-  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
+  display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
 }
 .rb-num {
-  font-size: 10px; font-weight: 800; padding: 2px 9px; border-radius: 4px;
+  font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 4px;
   color: #fff; flex-shrink: 0; letter-spacing: 0.4px;
 }
 .rb-action {
-  font-size: 10px; font-weight: 700; padding: 2px 10px; border-radius: 20px;
+  font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 20px;
   white-space: nowrap; flex-shrink: 0; margin-left: auto;
 }
-.rb-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
-.rb-desc { font-size: 12px; color: var(--muted); line-height: 1.6; margin-bottom: 10px; }
-.rb-threshold {
-  font-size: 11px; font-family: 'SF Mono','Consolas',monospace;
-  background: var(--card); border: 1px solid var(--border);
-  border-radius: 6px; padding: 6px 10px; color: var(--text); line-height: 1.7;
-}
+.rb-name  { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+.rb-desc  { font-size: 12px; color: var(--muted); line-height: 1.5; margin-bottom: 8px; }
+.rb-threshold { font-size: 11px; color: var(--muted); }
 
 /* ── Interactive trace ── */
 .trace-scene {
@@ -182,54 +178,54 @@
     <div class="card-title">Detection rules — checked in priority order</div>
     <div class="rule-grid">
 
-      <div class="rule-block" style="border-top-color:#dc2626;">
+      <div class="rule-block" style="border-left-color:#dc2626;">
         <div class="rb-header">
           <span class="rb-num" style="background:#dc2626;">P1</span>
           <span class="rb-action" style="background:#fee2e2;color:#dc2626;">Block</span>
         </div>
         <div class="rb-name">API Key Validation</div>
-        <div class="rb-desc">Every request must carry a valid <code>X-API-Key</code> header. Missing, malformed, or incorrect keys are rejected immediately — the sole authentication boundary.</div>
-        <div class="rb-threshold">Severity: medium &bull; Block: 60s</div>
+        <div class="rb-desc">Missing, malformed, or incorrect <code>X-API-Key</code> rejected instantly. Sole auth boundary — nothing else runs on a failed key.</div>
+        <div class="rb-threshold">Block: 60s &bull; Severity: medium</div>
       </div>
 
-      <div class="rule-block" style="border-top-color:#ea580c;">
+      <div class="rule-block" style="border-left-color:#ea580c;">
         <div class="rb-header">
           <span class="rb-num" style="background:#ea580c;">P2</span>
           <span class="rb-action" style="background:#ffedd5;color:#ea580c;">Honeypot</span>
         </div>
         <div class="rb-name">SQL / NoSQL Injection</div>
-        <div class="rb-desc">Scans all JSON keys and values against 10 regex patterns — UNION SELECT, DROP TABLE, OR 1=1, MongoDB operators, comment markers, time-based blind. Redirected silently; attacker gets a fake 200 OK.</div>
-        <div class="rb-threshold">Severity: critical &bull; Action: honeypot redirect</div>
+        <div class="rb-desc">10 regex patterns scanned across all JSON keys and values. Matched requests routed silently to honeypot — attacker receives a fake 200 OK.</div>
+        <div class="rb-threshold">Severity: critical &bull; No block — honeypot redirect</div>
       </div>
 
-      <div class="rule-block" style="border-top-color:#7c3aed;">
+      <div class="rule-block" style="border-left-color:#7c3aed;">
         <div class="rb-header">
           <span class="rb-num" style="background:#7c3aed;">P3</span>
           <span class="rb-action" style="background:#ede9fe;color:#7c3aed;">Block</span>
         </div>
         <div class="rb-name">Rate Limiting</div>
-        <div class="rb-desc">Sliding-window counter per IP. Decision made inside a lock — two concurrent requests cannot both read 199 and both pass the threshold boundary.</div>
-        <div class="rb-threshold">Threshold: &gt;200 req / 10s &bull; Block: 5 min</div>
+        <div class="rb-desc">Sliding-window counter per IP with thread-safe lock. Prevents race conditions at the threshold boundary.</div>
+        <div class="rb-threshold">&gt;200 req / 10s &bull; Block: 5 min</div>
       </div>
 
-      <div class="rule-block" style="border-top-color:#b45309;">
+      <div class="rule-block" style="border-left-color:#b45309;">
         <div class="rb-header">
           <span class="rb-num" style="background:#b45309;">P4</span>
           <span class="rb-action" style="background:#fef3c7;color:#b45309;">Deprioritise</span>
         </div>
         <div class="rb-name">Endpoint Scan Detection</div>
-        <div class="rb-desc">Detects rapid probing of multiple distinct API paths — a reconnaissance pattern. Legitimate clients rarely access more than 1–2 paths in a short window.</div>
-        <div class="rb-threshold">&gt;5 distinct paths / 10s &bull; 8 strikes in 120s &rarr; 30s block</div>
+        <div class="rb-desc">Rapid probing of multiple API paths — reconnaissance pattern. Deprioritised, strikes logged, escalates to block.</div>
+        <div class="rb-threshold">&gt;5 paths / 10s &bull; 8 strikes → 30s block</div>
       </div>
 
-      <div class="rule-block" style="border-top-color:#6b7280;">
+      <div class="rule-block" style="border-left-color:#6b7280;">
         <div class="rb-header">
           <span class="rb-num" style="background:#6b7280;">P5</span>
           <span class="rb-action" style="background:#f3f4f6;color:#6b7280;">Block</span>
         </div>
         <div class="rb-name">Payload Size</div>
-        <div class="rb-desc">Two sub-checks: raw body over 8 KB (memory exhaustion), and sort_large_list with over 500 items (CPU exhaustion). Oversized data can degrade servers without triggering the rate limiter.</div>
-        <div class="rb-threshold">Limits: 8 192 bytes &bull; 500 list items &bull; Block: 60s</div>
+        <div class="rb-desc">Oversized bodies (memory exhaustion) and oversized sort lists (CPU exhaustion) blocked before reaching backend servers.</div>
+        <div class="rb-threshold">&gt;8 KB body &bull; &gt;500 list items &bull; Block: 60s</div>
       </div>
 
     </div>
