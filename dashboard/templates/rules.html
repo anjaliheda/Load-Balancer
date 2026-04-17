@@ -41,42 +41,34 @@
   font-size: 13px; margin-top: 8px;
 }
 
-/* ── Priority ladder ── */
-.rule-ladder { display: flex; flex-direction: column; gap: 8px; }
-.rule-rung {
+/* ── Rule blocks grid ── */
+.rule-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;
+}
+@media (max-width: 900px) { .rule-grid { grid-template-columns: repeat(2, 1fr); } }
+
+.rule-block {
   border: 1px solid var(--border); border-radius: 10px;
-  overflow: hidden; cursor: pointer; transition: border-color 0.15s;
+  padding: 16px; background: var(--bg);
+  border-top: 4px solid var(--border);
 }
-.rule-rung:hover   { border-color: #c4b5fd; }
-.rule-rung.open    { border-color: var(--p1); }
-.rule-rung.r-pass  { border-left: 4px solid var(--allow); }
-.rule-rung.r-pass:hover { border-color: var(--allow); }
-.rule-rung.r-pass.open  { border-color: var(--allow); }
-.rung-hdr {
-  display: flex; align-items: center; gap: 12px; padding: 12px 16px;
-  background: var(--bg); user-select: none;
+.rb-header {
+  display: flex; align-items: center; gap: 8px; margin-bottom: 10px;
 }
-.rung-num {
-  font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 4px;
-  white-space: nowrap; color: #fff; flex-shrink: 0;
+.rb-num {
+  font-size: 10px; font-weight: 800; padding: 2px 9px; border-radius: 4px;
+  color: #fff; flex-shrink: 0; letter-spacing: 0.4px;
 }
-.rung-name  { font-size: 13px; font-weight: 600; color: var(--text); flex: 1; }
-.rung-badge {
-  font-size: 11px; padding: 2px 10px; border-radius: 20px;
-  font-weight: 600; white-space: nowrap; flex-shrink: 0;
+.rb-action {
+  font-size: 10px; font-weight: 700; padding: 2px 10px; border-radius: 20px;
+  white-space: nowrap; flex-shrink: 0; margin-left: auto;
 }
-.rung-arrow { color: var(--muted); font-size: 11px; transition: transform 0.2s; flex-shrink: 0; }
-.rule-rung.open .rung-arrow { transform: rotate(90deg); color: var(--p1); }
-.rule-rung.r-pass.open .rung-arrow { color: var(--allow); }
-.rung-body {
-  display: none; padding: 16px 18px; background: var(--card);
-  border-top: 1px solid var(--border); font-size: 13px; color: var(--muted); line-height: 1.7;
-}
-.rule-rung.open .rung-body { display: block; }
-.rung-config {
-  margin-top: 10px; padding: 8px 12px;
-  background: var(--bg); border-radius: 6px; border: 1px solid var(--border);
-  font-size: 12px; font-family: 'SF Mono','Consolas',monospace; color: var(--text); line-height: 1.8;
+.rb-name { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.rb-desc { font-size: 12px; color: var(--muted); line-height: 1.6; margin-bottom: 10px; }
+.rb-threshold {
+  font-size: 11px; font-family: 'SF Mono','Consolas',monospace;
+  background: var(--card); border: 1px solid var(--border);
+  border-radius: 6px; padding: 6px 10px; color: var(--text); line-height: 1.7;
 }
 
 /* ── Interactive trace ── */
@@ -141,13 +133,12 @@
 <div class="page">
 
   <div class="page-header">
-    <h2>Rule Engine <span style="color:var(--p1);">(Phase 1)</span></h2>
-    <p>Stateless pattern matching &mdash; every request is checked against 5 rule categories in strict priority order</p>
+    <h2>Rule Engine</h2>
   </div>
 
   <!-- ══ PIPELINE ══════════════════════════════════════════════════════ -->
   <div class="card">
-    <div class="card-title">Position in the pipeline &mdash; click a stage to highlight it</div>
+    <div class="card-title">Position in the pipeline</div>
     <div class="pipe-row">
 
       <div class="pipe-node dimmed" onclick="litNode(this,'Client sends requests to the IDMS proxy on port 5001. Its IP address is extracted and tracked for rate limiting and anomaly scoring.')">
@@ -184,116 +175,61 @@
 
     </div>
     <div id="pipe-tip" class="highlight-box purple" style="display:none;"></div>
-    <div class="highlight-box purple" style="font-size:13px;">
-      The Rule Engine runs <b>first</b> on every request, in strict priority order.
-      It short-circuits on the first match &mdash; an unauthenticated request never reaches the injection check.
-      If no rule fires, the request passes to the Anomaly Engine.
-    </div>
   </div>
 
-  <!-- ══ PRIORITY LADDER ═══════════════════════════════════════════════ -->
+  <!-- ══ RULE BLOCKS ═══════════════════════════════════════════════════ -->
   <div class="card">
-    <div class="card-title">Detection rules &mdash; click any row to expand</div>
-    <div class="rule-ladder">
+    <div class="card-title">Detection rules — checked in priority order</div>
+    <div class="rule-grid">
 
-      <div class="rule-rung" onclick="this.classList.toggle('open')">
-        <div class="rung-hdr">
-          <span class="rung-num" style="background:#dc2626;">P1</span>
-          <span class="rung-name">API Key Validation</span>
-          <span class="rung-badge" style="background:#fee2e2;color:#dc2626;">Block</span>
-          <span class="rung-arrow">&#9658;</span>
+      <div class="rule-block" style="border-top-color:#dc2626;">
+        <div class="rb-header">
+          <span class="rb-num" style="background:#dc2626;">P1</span>
+          <span class="rb-action" style="background:#fee2e2;color:#dc2626;">Block</span>
         </div>
-        <div class="rung-body">
-          Every request must include a valid <code>X-API-Key</code> header.
-          Missing, malformed (under 8 chars, contains injection characters), or incorrect keys are rejected instantly.
-          This is the <b>sole authentication boundary</b> &mdash; unauthenticated traffic never reaches any other check.
-          <div class="rung-config">Severity: medium &nbsp;&bull;&nbsp; Block duration: 60s
-Example trigger: X-API-Key: wrong-key-abc  &rarr;  403 Forbidden</div>
-        </div>
+        <div class="rb-name">API Key Validation</div>
+        <div class="rb-desc">Every request must carry a valid <code>X-API-Key</code> header. Missing, malformed, or incorrect keys are rejected immediately — the sole authentication boundary.</div>
+        <div class="rb-threshold">Severity: medium &bull; Block: 60s</div>
       </div>
 
-      <div class="rule-rung" onclick="this.classList.toggle('open')">
-        <div class="rung-hdr">
-          <span class="rung-num" style="background:#ea580c;">P2</span>
-          <span class="rung-name">SQL / NoSQL Injection</span>
-          <span class="rung-badge" style="background:#ffedd5;color:#ea580c;">Honeypot</span>
-          <span class="rung-arrow">&#9658;</span>
+      <div class="rule-block" style="border-top-color:#ea580c;">
+        <div class="rb-header">
+          <span class="rb-num" style="background:#ea580c;">P2</span>
+          <span class="rb-action" style="background:#ffedd5;color:#ea580c;">Honeypot</span>
         </div>
-        <div class="rung-body">
-          Recursively extracts all strings from the JSON body and matches against 10 compiled regex patterns:
-          UNION SELECT, DROP TABLE, OR 1=1, MongoDB operators (<code>$where</code>, <code>$ne</code>), time-based blind (SLEEP, BENCHMARK),
-          comment markers (<code>--</code>, <code>#</code>, <code>/*</code>), and more.
-          Matched requests are <b>silently redirected to the honeypot</b> &mdash;
-          the attacker receives a convincing fake 200 OK while the real servers are untouched.
-          <div class="rung-config">Severity: critical &nbsp;&bull;&nbsp; Action: honeypot redirect (not block)
-Example trigger: num1: "1 OR 1=1 --"  &rarr;  200 OK (fake response from honeypot)</div>
-        </div>
+        <div class="rb-name">SQL / NoSQL Injection</div>
+        <div class="rb-desc">Scans all JSON keys and values against 10 regex patterns — UNION SELECT, DROP TABLE, OR 1=1, MongoDB operators, comment markers, time-based blind. Redirected silently; attacker gets a fake 200 OK.</div>
+        <div class="rb-threshold">Severity: critical &bull; Action: honeypot redirect</div>
       </div>
 
-      <div class="rule-rung" onclick="this.classList.toggle('open')">
-        <div class="rung-hdr">
-          <span class="rung-num" style="background:#7c3aed;">P3</span>
-          <span class="rung-name">Rate Limiting</span>
-          <span class="rung-badge" style="background:#ede9fe;color:#7c3aed;">Block</span>
-          <span class="rung-arrow">&#9658;</span>
+      <div class="rule-block" style="border-top-color:#7c3aed;">
+        <div class="rb-header">
+          <span class="rb-num" style="background:#7c3aed;">P3</span>
+          <span class="rb-action" style="background:#ede9fe;color:#7c3aed;">Block</span>
         </div>
-        <div class="rung-body">
-          Sliding-window counter per IP. Timestamps are stored in a deque and evicted as they leave the window.
-          When the count exceeds the threshold the IP is blocked.
-          The decision is made <b>inside the lock</b> to prevent race conditions at the threshold boundary &mdash;
-          two concurrent requests cannot both read 199 and both pass.
-          <div class="rung-config">Threshold: 200 requests / 10 seconds &nbsp;&bull;&nbsp; Block duration: 5 min
-Detection rate (experiment): 73.3% &mdash; deterministic: (750&minus;200) / 750</div>
-        </div>
+        <div class="rb-name">Rate Limiting</div>
+        <div class="rb-desc">Sliding-window counter per IP. Decision made inside a lock — two concurrent requests cannot both read 199 and both pass the threshold boundary.</div>
+        <div class="rb-threshold">Threshold: &gt;200 req / 10s &bull; Block: 5 min</div>
       </div>
 
-      <div class="rule-rung" onclick="this.classList.toggle('open')">
-        <div class="rung-hdr">
-          <span class="rung-num" style="background:#b45309;">P4</span>
-          <span class="rung-name">Endpoint Scan Detection</span>
-          <span class="rung-badge" style="background:#fef3c7;color:#b45309;">Deprioritise</span>
-          <span class="rung-arrow">&#9658;</span>
+      <div class="rule-block" style="border-top-color:#b45309;">
+        <div class="rb-header">
+          <span class="rb-num" style="background:#b45309;">P4</span>
+          <span class="rb-action" style="background:#fef3c7;color:#b45309;">Deprioritise</span>
         </div>
-        <div class="rung-body">
-          Detects rapid probing of multiple distinct API paths from a single IP.
-          Attackers enumerating the API surface hit many different endpoints quickly &mdash;
-          legitimate clients typically access 1&ndash;2 paths. A sliding window tracks distinct paths per IP.
-          Deprioritise rather than block, since a misconfigured client might legitimately probe multiple endpoints.
-          <div class="rung-config">Threshold: &gt;5 distinct paths in 10s &nbsp;&bull;&nbsp; Action: deprioritise + strike logged
-Escalation: 8 strikes in 120s &rarr; auto-block for 30s</div>
-        </div>
+        <div class="rb-name">Endpoint Scan Detection</div>
+        <div class="rb-desc">Detects rapid probing of multiple distinct API paths — a reconnaissance pattern. Legitimate clients rarely access more than 1–2 paths in a short window.</div>
+        <div class="rb-threshold">&gt;5 distinct paths / 10s &bull; 8 strikes in 120s &rarr; 30s block</div>
       </div>
 
-      <div class="rule-rung" onclick="this.classList.toggle('open')">
-        <div class="rung-hdr">
-          <span class="rung-num" style="background:#6b7280;">P5</span>
-          <span class="rung-name">Payload Size</span>
-          <span class="rung-badge" style="background:#f3f4f6;color:#6b7280;">Block</span>
-          <span class="rung-arrow">&#9658;</span>
+      <div class="rule-block" style="border-top-color:#6b7280;">
+        <div class="rb-header">
+          <span class="rb-num" style="background:#6b7280;">P5</span>
+          <span class="rb-action" style="background:#f3f4f6;color:#6b7280;">Block</span>
         </div>
-        <div class="rung-body">
-          Two sub-checks: (a) raw body size exceeding 8 KB prevents memory exhaustion,
-          and (b) sort_large_list requests with more than 500 items prevent CPU exhaustion.
-          These attacks don't need to be sophisticated &mdash; repeatedly sending oversized data can
-          degrade server performance without ever triggering the rate limiter.
-          <div class="rung-config">Limits: 8 192 bytes body &nbsp;&bull;&nbsp; 500 items in list &nbsp;&bull;&nbsp; Block duration: 60s</div>
-        </div>
-      </div>
-
-      <div class="rule-rung r-pass" onclick="this.classList.toggle('open')">
-        <div class="rung-hdr">
-          <span class="rung-num" style="background:var(--allow);">PASS</span>
-          <span class="rung-name">All checks passed &rarr; Anomaly Engine</span>
-          <span class="rung-badge" style="background:#dcfce7;color:var(--allow);">Forward</span>
-          <span class="rung-arrow">&#9658;</span>
-        </div>
-        <div class="rung-body">
-          If no rule fires, the request is clean from a stateless perspective.
-          It is forwarded to the Anomaly Engine (Phase 2) for statistical scoring against this IP's baseline behaviour.
-          The Anomaly Engine may still flag it &mdash; but that result is recorded separately.
-          <div class="rung-config">No block. No honeypot. Rule inspect time: &lt;1ms.
-Anomaly engine runs next on all requests that reach this point.</div>
-        </div>
+        <div class="rb-name">Payload Size</div>
+        <div class="rb-desc">Two sub-checks: raw body over 8 KB (memory exhaustion), and sort_large_list with over 500 items (CPU exhaustion). Oversized data can degrade servers without triggering the rate limiter.</div>
+        <div class="rb-threshold">Limits: 8 192 bytes &bull; 500 list items &bull; Block: 60s</div>
       </div>
 
     </div>
@@ -301,7 +237,7 @@ Anomaly engine runs next on all requests that reach this point.</div>
 
   <!-- ══ INTERACTIVE TRACE ══════════════════════════════════════════════ -->
   <div class="card">
-    <div class="card-title">Request trace &mdash; pick a scenario to see how rules fire</div>
+    <div class="card-title">Request trace</div>
     <div class="trace-btns">
       <button class="trace-btn" onclick="runTrace('wrong_key', this)">Wrong API Key</button>
       <button class="trace-btn" onclick="runTrace('sqli', this)">SQL Injection</button>
