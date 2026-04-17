@@ -110,32 +110,31 @@
   </div>
 
   <div class="page-header">
-    <h2>Anomaly Engine <span style="color:var(--p2)">(Phase 2)</span></h2>
-    <p>Per-IP statistical baseline profiling &mdash; detects deviations the rule engine cannot see</p>
+    <h2>Anomaly Engine</h2>
   </div>
 
   <!-- Pipeline -->
   <div class="card">
-    <div class="card-title">Position in the pipeline &mdash; click a stage</div>
+    <div class="card-title">Position in the pipeline</div>
     <div class="pipe-row">
-      <div class="pipe-node dimmed" onclick="litNodeA(this,'Client &mdash; sends requests. Its inter-arrival times are recorded to build a personal baseline over the first 150 requests.')">
-        <div class="pn-icon">&#x2328;</div><div class="pn-label">Client</div>
+      <div class="pipe-node dimmed">
+        <div class="pn-label">Client</div>
       </div>
       <div class="pipe-arrow"></div>
-      <div class="pipe-node dimmed" onclick="litNodeA(this,'Rule Engine (Phase 1) &mdash; must pass all 5 checks before reaching here. Only clean requests get a Z-score.')">
-        <div class="pn-icon">&#x1F4CB;</div><div class="pn-label">Rule Engine</div><div class="pn-sub">Phase 1 passed</div>
+      <div class="pipe-node dimmed">
+        <div class="pn-label">Rule Engine</div><div class="pn-sub">passed</div>
       </div>
       <div class="pipe-arrow"></div>
-      <div class="pipe-node lit" onclick="litNodeA(this,'Anomaly Engine (you are here) &mdash; scores the request against this IP\'s sliding-window baseline using a modified Z-score. Flags requests that arrive much faster than the IP\'s own normal pace.')">
-        <div class="pn-icon">&#x1F4CA;</div><div class="pn-label">Anomaly Engine</div><div class="pn-sub">Phase 2</div>
+      <div class="pipe-node lit">
+        <div class="pn-label">Anomaly Engine</div><div class="pn-sub">you are here</div>
       </div>
       <div class="pipe-arrow"></div>
-      <div class="pipe-node dimmed" onclick="litNodeA(this,'Mitigation Controller &mdash; receives the anomaly verdict and decides: deprioritise, escalate, or allow. Manages the escalation strike counter.')">
-        <div class="pn-icon">&#x1F6E1;</div><div class="pn-label">Mitigation</div><div class="pn-sub">Phase 3</div>
+      <div class="pipe-node dimmed">
+        <div class="pn-label">Mitigation</div>
       </div>
       <div class="pipe-arrow"></div>
-      <div class="pipe-node dimmed" onclick="litNodeA(this,'Load Balancer &mdash; receives only clean, non-anomalous requests that passed all three phases.')">
-        <div class="pn-icon">&#x2696;</div><div class="pn-label">Load Balancer</div>
+      <div class="pipe-node dimmed">
+        <div class="pn-label">Load Balancer</div>
       </div>
     </div>
     <div id="pipe-tip-a" style="display:none;" class="highlight-box green"></div>
