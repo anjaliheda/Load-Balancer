@@ -104,8 +104,24 @@
 .algo-panel.show { display: flex; animation: fade-in 0.18s ease; }
 @keyframes fade-in { from{opacity:0} to{opacity:1} }
 
-.at-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 10px; }
+.at-title { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
 .imp-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; color: var(--allow); margin-bottom: 8px; }
+
+/* ── Algorithm result stats ── */
+.algo-stats {
+  display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;
+}
+.astat {
+  display: flex; flex-direction: column; align-items: center;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 8px; padding: 6px 14px; flex: 1; min-width: 70px;
+}
+.astat-val { font-size: 17px; font-weight: 800; line-height: 1.1; }
+.astat-lbl { font-size: 10px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; margin-top: 2px; }
+.astat-note { font-size: 10px; color: var(--muted); margin-top: 4px; font-style: italic; text-align: center; line-height: 1.4; }
+.val-green  { color: var(--allow); }
+.val-orange { color: var(--honeypot); }
+.val-muted  { color: var(--muted); }
 
 .imp-row {
   display: flex; gap: 10px; padding: 9px 12px; margin-bottom: 6px;
@@ -234,6 +250,19 @@
         <!-- Round Robin -->
         <div class="algo-panel show" id="panel-rr">
           <div class="at-title">Round Robin</div>
+          <div class="algo-stats">
+            <div class="astat">
+              <span class="astat-val val-green">100%</span>
+              <span class="astat-lbl">Success rate</span>
+            </div>
+            <div class="astat">
+              <span class="astat-val val-muted">0.37s</span>
+              <span class="astat-lbl">Avg response</span>
+            </div>
+            <div class="astat" style="flex:2;">
+              <span class="astat-note">Even distribution across all 4 servers. Best overall throughput.</span>
+            </div>
+          </div>
           <div class="imp-label">Our improvements</div>
           <div class="imp-row" onclick="this.classList.toggle('open')">
             <span class="arrow">▶</span>
@@ -261,6 +290,19 @@
         <!-- Source Hashing -->
         <div class="algo-panel" id="panel-sh">
           <div class="at-title">Source Hashing</div>
+          <div class="algo-stats">
+            <div class="astat">
+              <span class="astat-val val-orange">~67%</span>
+              <span class="astat-lbl">Success rate</span>
+            </div>
+            <div class="astat">
+              <span class="astat-val val-muted">1.54s</span>
+              <span class="astat-lbl">Avg response</span>
+            </div>
+            <div class="astat" style="flex:2;">
+              <span class="astat-note">Hash concentration overloads individual servers under mixed workloads — expected research finding, not an error.</span>
+            </div>
+          </div>
           <div class="imp-label">Our improvements</div>
           <div class="imp-row" onclick="this.classList.toggle('open')">
             <span class="arrow">▶</span>
@@ -288,6 +330,19 @@
         <!-- Least Loaded -->
         <div class="algo-panel" id="panel-ll">
           <div class="at-title">Least Loaded</div>
+          <div class="algo-stats">
+            <div class="astat">
+              <span class="astat-val val-green">100%</span>
+              <span class="astat-lbl">Success rate</span>
+            </div>
+            <div class="astat">
+              <span class="astat-val val-muted">0.58s</span>
+              <span class="astat-lbl">Avg response</span>
+            </div>
+            <div class="astat" style="flex:2;">
+              <span class="astat-note">~0.2s overhead vs Round Robin due to /load polling per request.</span>
+            </div>
+          </div>
           <div class="imp-label">Our improvements</div>
           <div class="imp-row" onclick="this.classList.toggle('open')">
             <span class="arrow">▶</span>
