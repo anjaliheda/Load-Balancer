@@ -316,6 +316,7 @@ select:focus { border-color: var(--accent); }
             <td class="sc-outcome-cell">Block after 200 req</td>
             <td><button class="sc-btn" onclick="fireScenario('flood', this)">Run</button></td>
           </tr>
+          {# Burst Attack (Phase 2 — Anomaly Engine) — hidden for Phase 3 demo
           <tr id="row-burst">
             <td><span class="sc-phase-tag p2">P2</span></td>
             <td class="sc-name">Burst Attack</td>
@@ -323,6 +324,7 @@ select:focus { border-color: var(--accent); }
             <td class="sc-outcome-cell">Flagged / deprioritised</td>
             <td><button class="sc-btn" onclick="fireScenario('burst', this)">Run</button></td>
           </tr>
+          #}
         </tbody>
       </table>
 
@@ -330,12 +332,14 @@ select:focus { border-color: var(--accent); }
       <div style="display:flex; align-items:center; gap:14px; margin-top:12px; padding-top:12px; border-top:1px solid var(--border);">
         <button class="sc-reset-btn" onclick="fireScenario('reset', this)">Reset &mdash; unblock all demo IPs</button>
         <div style="flex:1"></div>
+        {# Anomaly baseline warmup strip — hidden for Phase 3 demo
         <div class="warmup-strip" id="warmup-strip" style="margin-top:0; flex:1; max-width:340px;">
           <div class="wu-dot warming" id="wu-dot"></div>
           <span class="wu-label" id="wu-label">Baseline warming up</span>
           <span class="wu-detail" id="wu-detail">0 / 150 samples</span>
           <div class="wu-bar-wrap"><div class="wu-bar" id="wu-bar" style="width:0%"></div></div>
         </div>
+        #}
       </div>
 
       <!-- Status output -->
@@ -740,6 +744,7 @@ async function fireScenario(type, btn) {
 // ═══════════════════════════════════════════════════════════════
 const WU_IP = '10.10.0.4';
 
+/* refreshWarmup — Phase 2 anomaly baseline indicator, hidden for Phase 3 demo
 async function refreshWarmup() {
   try {
     const snap   = await (await fetch('/api/anomaly_snapshot')).json();
@@ -768,17 +773,18 @@ async function refreshWarmup() {
     }
   } catch(_) {}
 }
+*/
 
 // ═══════════════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════════════
-refreshOverview(); refreshDetections(); refreshAllowed(); refreshBlocked(); refreshWarmup();
+refreshOverview(); refreshDetections(); refreshAllowed(); refreshBlocked();
 const _intervals = [
   setInterval(refreshOverview,   2000),
   setInterval(refreshDetections, 2000),
   setInterval(refreshAllowed,    2000),
   setInterval(refreshBlocked,    3000),
-  setInterval(refreshWarmup,     3000),
+  // setInterval(refreshWarmup,  3000),  // Phase 2 — hidden for Phase 3 demo
 ];
 window.addEventListener('beforeunload', () => _intervals.forEach(id => clearInterval(id)));
 </script>
