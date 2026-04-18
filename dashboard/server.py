@@ -73,8 +73,8 @@ def _auto_start_baseline():
     threading.Thread(target=_run_baseline, daemon=True).start()
 
 
-# Start the auto-baseline in a background thread at import time
-threading.Thread(target=_auto_start_baseline, daemon=True).start()
+# Auto-baseline disabled for Phase 3 demo (anomaly engine under construction)
+# threading.Thread(target=_auto_start_baseline, daemon=True).start()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -383,4 +383,4 @@ def api_demo():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=8080, threaded=True)
+    app.run(host="0.0.0.0", port=8080, threaded=True, debug=True)
